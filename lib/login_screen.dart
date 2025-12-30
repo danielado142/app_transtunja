@@ -11,7 +11,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // 1. Creamos los controladores para leer el texto
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _rememberMe = false;
+
+  // Limpiamos los controladores cuando el widget se destruye
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextFormField(
+                      controller: _emailController, // 2. Asignamos el controlador
                       decoration: const InputDecoration(
                         labelText: 'Correo electrónico',
                         border: UnderlineInputBorder(),
@@ -60,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
+                      controller: _passwordController, // 2. Asignamos el controlador
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: 'Contraseña',
@@ -91,11 +104,26 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // ¡Aquí está la navegación!
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MapScreen()),
-                  );
+                  // --- 3. LÓGICA DE SIMULACIÓN ---
+                  final email = _emailController.text;
+                  final password = _passwordController.text;
+
+                  // Comprobamos las credenciales de prueba
+                  if (email == 'admin@test.com' && password == '123456') {
+                    // Si son correctas, navegamos al mapa
+                    Navigator.pushReplacement( // Usamos pushReplacement para que el usuario no pueda volver atrás
+                      context,
+                      MaterialPageRoute(builder: (context) => const MapScreen()),
+                    );
+                  } else {
+                    // Si son incorrectas, mostramos un mensaje de error
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Correo o contraseña incorrectos.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
