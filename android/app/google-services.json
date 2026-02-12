@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "497369853822",
+    "project_id": "transtunja",
+    "storage_bucket": "transtunja.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497369853822:android:5d58d9b3a9d53680d80d2f",
+        "android_client_info": {
+          "package_name": "com.transtunja.transtunja"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNxiUPrgkOJnQHagRdFhMbUjDqR1LWl9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'auth_service.dart';
+import 'map_screen.dart';
 import 'verification_screen.dart';
 
 class BottomCurveClipper extends CustomClipper<Path> {
@@ -180,7 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _buildTextField('Número de Télefono', controller: _telefonoController),
                           _buildTextField('Correo electrónico', controller: _emailController),
                           _buildTextField('Fecha de nacimiento', controller: _fechaNacimientoController, hint: 'YYYY-MM-DD'),
-                          // --- ORDEN CORREGIDO ---
                           _buildTextField('Contraseña', controller: _passwordController, isPassword: true),
                           _buildTextField('Confirmar contraseña', controller: _confirmPasswordController, isPassword: true),
                           _buildTextField('Rol', controller: _rolController, hint: 'admin, conductor, o usuario', isLast: true),
@@ -209,13 +210,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 40)),
+                        IconButton(
+                          onPressed: () async {
+                            final userCredential = await AuthService.signInWithFacebook();
+                            if (userCredential != null) {
+                              if (mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const MapScreen()),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Inicio de sesión con Facebook cancelado o fallido')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 40)
+                        ),
                         const SizedBox(width: 20),
                         IconButton(onPressed: () {}, icon: const Icon(Icons.mail, color: Colors.red, size: 40)),
                         const SizedBox(width: 20),
                         IconButton(onPressed: () {}, icon: const Icon(Icons.camera_alt, color: Colors.purple, size: 40)),
                         const SizedBox(width: 20),
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.g_mobiledata, color: Colors.green, size: 50)),
+                        IconButton(
+                            onPressed: () async {
+                              final userCredential = await AuthService.signInWithGoogle();
+                              if (userCredential != null) {
+                                if (mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const MapScreen()),
+                                  );
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Sesión de Google cancelada')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.g_mobiledata, color: Colors.green, size: 50)),
                       ],
                     ),
                     const SizedBox(height: 30),

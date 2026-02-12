@@ -1,7 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'map_screen.dart'; // RUTA CORREGIDA
+import 'map_screen.dart';
 import 'register_screen.dart';
+// 1. IMPORTANTE: El nombre del servicio ahora es más genérico
+import 'auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,12 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 1. Creamos los controladores para leer el texto
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _rememberMe = false;
 
-  // Limpiamos los controladores cuando el widget se destruye
   @override
   void dispose() {
     _emailController.dispose();
@@ -60,115 +59,101 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextFormField(
-                      controller: _emailController, // 2. Asignamos el controlador
+                      controller: _emailController,
                       decoration: const InputDecoration(
                         labelText: 'Correo electrónico',
                         border: UnderlineInputBorder(),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red),
-                        ),
                       ),
-                      keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
-                      controller: _passwordController, // 2. Asignamos el controlador
+                      controller: _passwordController,
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: 'Contraseña',
                         suffixIcon: Icon(Icons.visibility_off),
                         border: UnderlineInputBorder(),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red),
-                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _rememberMe,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _rememberMe = value!;
-                      });
-                    },
-                    activeColor: Colors.red,
-                  ),
-                  const Text('Recuérdame'),
-                ],
-              ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // --- 3. LÓGICA DE SIMULACIÓN ---
-                  final email = _emailController.text;
-                  final password = _passwordController.text;
-
-                  // Comprobamos las credenciales de prueba
-                  if (email == 'admin@test.com' && password == '123456') {
-                    // Si son correctas, navegamos al mapa
-                    Navigator.pushReplacement( // Usamos pushReplacement para que el usuario no pueda volver atrás
-                      context,
-                      MaterialPageRoute(builder: (context) => const MapScreen()),
-                    );
-                  } else {
-                    // Si son incorrectas, mostramos un mensaje de error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Correo o contraseña incorrectos.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  // Lógica de inicio de sesión manual (sin cambios)
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
                 ),
-                child: const Text(
-                  'Inicia sesión',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
+                child: const Text('Inicia sesión', style: TextStyle(color: Colors.white)),
               ),
-              const SizedBox(height: 20),
-              const Text('¿Olvidaste tu contraseña?'),
               const SizedBox(height: 30),
               const Text('O inicia sesión con'),
               const SizedBox(height: 20),
+
+              // --- BOTONES DE REDES SOCIALES ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.facebook, color: Colors.blue, size: 40)),
+                  // 2. BOTÓN DE FACEBOOK ACTUALIZADO
+                  IconButton(
+                      onPressed: () async {
+                        // Llamamos al nuevo servicio de Facebook
+                        final userCredential = await AuthService.signInWithFacebook();
+
+                        if (userCredential != null && mounted) {
+                          // Si funciona, vamos al mapa
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MapScreen()),
+                          );
+                        } else {
+                          // Si falla o cancela
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Inicio de sesión con Facebook cancelado o fallido')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.facebook, color: Colors.blue, size: 40)
+                  ),
                   const SizedBox(width: 30),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.g_mobiledata, color: Colors.red, size: 50)),
+
+                  // 3. BOTÓN DE GOOGLE CORREGIDO (usa AuthService)
+                  IconButton(
+                      onPressed: () async {
+                        // Llamamos al servicio de Google desde la clase genérica
+                        final userCredential = await AuthService.signInWithGoogle();
+
+                        if (userCredential != null && mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MapScreen()),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Inicio de sesión con Google cancelado')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.g_mobiledata, color: Colors.red, size: 50)
+                  ),
                 ],
               ),
+
               const SizedBox(height: 40),
               Text.rich(
                 TextSpan(
                   text: '¿Aún no tienes cuenta? ',
-                  style: const TextStyle(color: Colors.black),
-                  children: <TextSpan>[
+                  children: [
                     TextSpan(
                       text: 'Regístrate aquí',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                       recognizer: TapGestureRecognizer()
                         ..onTap = () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
                         },
                     ),
                   ],

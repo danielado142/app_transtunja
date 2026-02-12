@@ -1,66 +1,43 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // Importamos la nueva pantalla (ruta corregida)
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
-void main() => runApp(const TransTunjaApp());
+import 'login_screen.dart';
 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (kIsWeb) {
+    // Configuración para el navegador
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyAiO-tzQjWbqFaFr4q1JfoBVEQC9vaihlg",
+        authDomain: "transtunja.firebaseapp.com",
+        projectId: "transtunja",
+        storageBucket: "transtunja.firebasestorage.app",
+        messagingSenderId: "497369853822",
+        appId: "1:497369853822:web:26d1c474912f47aed80d2f",
+        measurementId: "G-DKRYV7NV9R",
+      ),
+    );
+  } else {
+    // Configuración para Android
+    await Firebase.initializeApp();
+  }
+
+  // ¡ESTA LÍNEA DEBE IR AQUÍ ADENTRO!
+  runApp(const TransTunjaApp());
+}
+
+// Aquí abajo debe continuar tu clase TransTunjaApp...
 class TransTunjaApp extends StatelessWidget {
   const TransTunjaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'TransTunja',
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        primarySwatch: Colors.red,
-      ),
-      home: const WelcomeScreen(),
-    );
-  }
-}
-
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Spacer(flex: 3),
-            Image.asset('assets/images/transtunja_logo.png'),
-            const Spacer(flex: 2),
-            ElevatedButton(
-              onPressed: () {
-                // ¡Aquí está la magia de la navegación!
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                ),
-              ),
-              child: const Text(
-                'Entrar',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const Spacer(flex: 1),
-          ],
-        ),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
