@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'login_screen.dart';
+import 'splash_screen.dart';
+import 'login_screen.dart'; // Asegúrate de importar tu login
+// IMPORTA AQUÍ TUS PANTALLAS DE DESTINO:
+// import 'home_pasajero.dart';
+// import 'home_conductor.dart';
+// import 'home_admin.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kIsWeb) {
-    // Configuración para el navegador
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: "AIzaSyAiO-tzQjWbqFaFr4q1JfoBVEQC9vaihlg",
@@ -21,23 +25,33 @@ void main() async {
       ),
     );
   } else {
-    // Configuración para Android
     await Firebase.initializeApp();
   }
 
-  // ¡ESTA LÍNEA DEBE IR AQUÍ ADENTRO!
   runApp(const TransTunjaApp());
 }
 
-// Aquí abajo debe continuar tu clase TransTunjaApp...
 class TransTunjaApp extends StatelessWidget {
   const TransTunjaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'TransTunja',
-      home: const LoginScreen(),
+
+      // Pantalla inicial
+      home: const SplashScreen(),
+
+      // --- ESTO ES LO QUE FALTABA: DEFINIR LAS RUTAS ---
+      routes: {
+        '/login': (context) => const LoginScreen(),
+
+        // Sustituye 'Container()' por el nombre de tus clases reales (ej. HomePasajero())
+        '/home_pasajero': (context) => const Scaffold(body: Center(child: Text("Bienvenido Pasajero"))),
+        '/home_conductor': (context) => const Scaffold(body: Center(child: Text("Bienvenido Conductor"))),
+        '/home_admin': (context) => const Scaffold(body: Center(child: Text("Bienvenido Administrador"))),
+      },
     );
   }
 }

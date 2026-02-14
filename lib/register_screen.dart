@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'auth_service.dart';
 import 'map_screen.dart';
@@ -77,12 +78,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     const String domain = kIsWeb ? 'localhost' : '10.0.2.2';
-    final url = Uri.parse('http://$domain/transtunja_api/registro.php');
+    final url = Uri.parse('http://localhost/TransTunja/registro.php');
 
     try {
       final response = await http.post(
-        url,
-        body: jsonEncode({
+          url,
+          headers: {"Content-Type": "application/json"}, // Añade esto si no está
+          body: jsonEncode({
           'nombre': _nombresController.text,
           'apellido': _apellidosController.text,
           'documento': _documentoController.text,
@@ -91,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'fecha_nacimiento': _fechaNacimientoController.text,
           'rol': _rolController.text,
           'password': _passwordController.text,
-        }),
+          }), // Este cierra el jsonEncode
       );
 
       if (!mounted) return;
@@ -117,6 +119,90 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo conectar al servidor: $e')),
+      );
+    }
+  }
+
+  // --- FUNCIÓN ACTUALIZADA PARA MANEJAR EL LOGIN SOCIAL Y LA VALIDACIÓN DE ROL ---
+  Future<void> _handleSocialSignIn(UserCredential? userCredential) async {
+    if (userCredential?.user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicio de sesión social cancelado o fallido.')),
+      );
+      return;
+    }
+
+    final email = userCredential!.user!.email;
+    if (email == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo obtener el correo electrónico de Firebase.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // 1. URL Dinámica
+    const String domain = kIsWeb ? 'localhost' : '10.0.2.2';
+    // 2. Mapeo de atributos: se usa 'correo' como parámetro
+    final url = Uri.parse('http://$domain/TransTunja/get_user_role.php?correo=$email');
+    
+    // 3. Logs de depuración
+    print('Enviando email: $email');
+    
+    try {
+      // 5. Headers
+      final response = await http.get(url, headers: {
+        "Accept": "application/json",
+      });
+
+      if (!mounted) return;
+      
+      // 3. Logs de depuración
+      print('Respuesta Servidor: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          // 2. Mapeo de atributos: se lee 'idRol'
+          final role = responseData['idRol']; 
+          String routeName;
+          
+          // 4. Navegación y validación de mayúsculas/minúsculas
+          switch (role.toString().toLowerCase()) {
+            case 'pasajero':
+              routeName = '/home_pasajero';
+              break;
+            case 'conductor':
+              routeName = '/home_conductor';
+              break;
+            case 'administrador':
+              routeName = '/home_admin';
+              break;
+            default:
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Rol no reconocido por la aplicación: "$role"')),
+              );
+              return;
+          }
+          Navigator.pushReplacementNamed(context, routeName);
+
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al validar el rol: ${responseData['message'] ?? 'Respuesta desconocida'}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error del servidor al consultar el rol: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de conexión al validar el rol: $e')),
       );
     }
   }
@@ -213,18 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         IconButton(
                           onPressed: () async {
                             final userCredential = await AuthService.signInWithFacebook();
-                            if (userCredential != null) {
-                              if (mounted) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const MapScreen()),
-                                );
-                              }
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Inicio de sesión con Facebook cancelado o fallido')),
-                              );
-                            }
+                            await _handleSocialSignIn(userCredential);
                           },
                           icon: const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 40)
                         ),
@@ -236,18 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         IconButton(
                             onPressed: () async {
                               final userCredential = await AuthService.signInWithGoogle();
-                              if (userCredential != null) {
-                                if (mounted) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const MapScreen()),
-                                  );
-                                }
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Sesión de Google cancelada')),
-                                );
-                              }
+                              await _handleSocialSignIn(userCredential);
                             },
                             icon: const Icon(Icons.g_mobiledata, color: Colors.green, size: 50)),
                       ],
