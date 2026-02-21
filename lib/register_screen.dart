@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_core/firebase_core.dart'; // Agregado para verificar inicialización
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'auth_service.dart';
-import 'map_screen.dart';
 import 'verification_screen.dart';
 
 class BottomCurveClipper extends CustomClipper<Path> {
@@ -18,7 +16,6 @@ class BottomCurveClipper extends CustomClipper<Path> {
       ..close();
     return path;
   }
-
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
@@ -41,168 +38,94 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _rolController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  @override
-  void dispose() {
-    _nombresController.dispose();
-    _apellidosController.dispose();
-    _documentoController.dispose();
-    _telefonoController.dispose();
-    _emailController.dispose();
-    _fechaNacimientoController.dispose();
-    _passwordController.dispose();
-    _rolController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _enviarDatos() async {
-    if (_nombresController.text.isEmpty ||
-        _apellidosController.text.isEmpty ||
-        _documentoController.text.isEmpty ||
-        _telefonoController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _fechaNacimientoController.text.isEmpty ||
-        _rolController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, complete todos los campos')),
-      );
-      return;
-    }
-
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Las contraseñas no coinciden')),
-      );
-      return;
-    }
-
-    const String domain = kIsWeb ? 'localhost' : '10.0.2.2';
-    final url = Uri.parse('http://localhost/TransTunja/registro.php');
-
-    try {
-      final response = await http.post(
-          url,
-          headers: {"Content-Type": "application/json"}, // Añade esto si no está
-          body: jsonEncode({
+  void _navegarAVerificacion(String vId) {
+    Navigator.pushNamed(
+      context,
+      '/verification',
+      arguments: {
+        'verificationId': vId,
+        'userData': {
           'nombre': _nombresController.text,
           'apellido': _apellidosController.text,
           'documento': _documentoController.text,
-          'telefono': _telefonoController.text,
+          'telefono': "+57${_telefonoController.text.trim()}",
           'email': _emailController.text,
           'fecha_nacimiento': _fechaNacimientoController.text,
           'rol': _rolController.text,
           'password': _passwordController.text,
-          }), // Este cierra el jsonEncode
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['status'] == 'success') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const VerificationScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error de registro: ${responseData['message']}')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error del servidor: ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo conectar al servidor: $e')),
-      );
-    }
+        },
+      },
+    );
   }
 
-  // --- FUNCIÓN ACTUALIZADA PARA MANEJAR EL LOGIN SOCIAL Y LA VALIDACIÓN DE ROL ---
-  Future<void> _handleSocialSignIn(UserCredential? userCredential) async {
-    if (userCredential?.user == null) {
-      if (!mounted) return;
+  // FUNCIÓN CORREGIDA: Primero MySQL, luego Firebase
+  Future<void> _enviarDatos() async {
+    if (_nombresController.text.isEmpty || _telefonoController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Inicio de sesión social cancelado o fallido.')),
+        const SnackBar(content: Text('Por favor, complete los campos principales')),
       );
       return;
     }
 
-    final email = userCredential!.user!.email;
-    if (email == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo obtener el correo electrónico de Firebase.')),
-      );
-      return;
-    }
+    String numeroCompleto = "+57${_telefonoController.text.trim()}";
 
-    if (!mounted) return;
+    // Configuración de URL según plataforma
+    final String domain = kIsWeb ? 'localhost' : '192.168.1.48';
+    final url = Uri.parse('http://$domain/TransTunja/registro.php');
 
-    // 1. URL Dinámica
-    const String domain = kIsWeb ? 'localhost' : '10.0.2.2';
-    // 2. Mapeo de atributos: se usa 'correo' como parámetro
-    final url = Uri.parse('http://$domain/TransTunja/get_user_role.php?correo=$email');
-    
-    // 3. Logs de depuración
-    print('Enviando email: $email');
-    
     try {
-      // 5. Headers
-      final response = await http.get(url, headers: {
-        "Accept": "application/json",
-      });
-
-      if (!mounted) return;
-      
-      // 3. Logs de depuración
-      print('Respuesta Servidor: ${response.body}');
+      // 1. Guardado en Base de Datos MySQL (XAMPP)
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'nombre': _nombresController.text,
+          'apellido': _apellidosController.text,
+          'documento': _documentoController.text,
+          'telefono': numeroCompleto,
+          'email': _emailController.text,
+          'fecha_nacimiento': _fechaNacimientoController.text,
+          'rol': _rolController.text,
+          'password': _passwordController.text,
+        }),
+      );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          // 2. Mapeo de atributos: se lee 'idRol'
-          final role = responseData['idRol']; 
-          String routeName;
-          
-          // 4. Navegación y validación de mayúsculas/minúsculas
-          switch (role.toString().toLowerCase()) {
-            case 'pasajero':
-              routeName = '/home_pasajero';
-              break;
-            case 'conductor':
-              routeName = '/home_conductor';
-              break;
-            case 'administrador':
-              routeName = '/home_admin';
-              break;
-            default:
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Rol no reconocido por la aplicación: "$role"')),
-              );
-              return;
-          }
-          Navigator.pushReplacementNamed(context, routeName);
 
+        // 2. Si el PHP responde éxito, procedemos con Firebase
+        if (responseData['status'] == 'success') {
+
+          if (Firebase.apps.isEmpty) {
+            throw Exception("Firebase no está inicializado. Revisa main.dart");
+          }
+
+          await FirebaseAuth.instance.verifyPhoneNumber(
+            phoneNumber: numeroCompleto,
+            verificationCompleted: (PhoneAuthCredential credential) async {
+              await FirebaseAuth.instance.signInWithCredential(credential);
+              _navegarAVerificacion("");
+            },
+            verificationFailed: (FirebaseAuthException e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error Firebase: ${e.message}')),
+              );
+            },
+            codeSent: (String verificationId, int? resendToken) {
+              // 3. Salto a la interfaz de verificación al enviar el SMS
+              _navegarAVerificacion(verificationId);
+            },
+            codeAutoRetrievalTimeout: (String verificationId) {},
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al validar el rol: ${responseData['message'] ?? 'Respuesta desconocida'}')),
+            SnackBar(content: Text('Error PHP: ${responseData['message']}')),
           );
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error del servidor al consultar el rol: ${response.statusCode}')),
-        );
       }
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de conexión al validar el rol: $e')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
@@ -210,125 +133,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8E8E8),
       body: Stack(
         children: [
-           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+          Positioned(
+            top: 0, left: 0, right: 0,
             child: ClipPath(
               clipper: BottomCurveClipper(),
               child: Container(
-                height: screenSize.height * 0.4,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: const AssetImage("assets/images/plaza_de_bolivar.png"),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.4), BlendMode.darken),
-                  ),
-                ),
+                height: screenSize.height * 0.3,
+                color: Colors.red,
               ),
             ),
           ),
           Positioned.fill(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(height: screenSize.height * 0.15),
-                    const Text(
-                      'Crea tu cuenta en segundos',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(blurRadius: 10.0, color: Colors.black)],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 30, 20, 15),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20.0),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, spreadRadius: 5)],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildTextField('Nombres', controller: _nombresController),
-                          _buildTextField('Apellidos', controller: _apellidosController),
-                          _buildTextField('Tipo documento'),
-                          _buildTextField('N. Documento', controller: _documentoController),
-                          _buildTextField('Número de Télefono', controller: _telefonoController),
-                          _buildTextField('Correo electrónico', controller: _emailController),
-                          _buildTextField('Fecha de nacimiento', controller: _fechaNacimientoController, hint: 'YYYY-MM-DD'),
-                          _buildTextField('Contraseña', controller: _passwordController, isPassword: true),
-                          _buildTextField('Confirmar contraseña', controller: _confirmPasswordController, isPassword: true),
-                          _buildTextField('Rol', controller: _rolController, hint: 'admin, conductor, o usuario', isLast: true),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Al registrarte aceptas nuestros Términos y Condiciones',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.black54, fontSize: 12),
-                    ),
-                    const SizedBox(height: 15),
-                    ElevatedButton(
-                      onPressed: _enviarDatos,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
-                      ),
-                      child: const Text('Regístrate', style: TextStyle(fontSize: 18, color: Colors.white)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text('O regístrate con', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: Column(
+                children: [
+                  SizedBox(height: screenSize.height * 0.1),
+                  const Text('Registro', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                    child: Column(
                       children: [
-                        IconButton(
-                          onPressed: () async {
-                            final userCredential = await AuthService.signInWithFacebook();
-                            await _handleSocialSignIn(userCredential);
-                          },
-                          icon: const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 40)
-                        ),
-                        const SizedBox(width: 20),
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.mail, color: Colors.red, size: 40)),
-                        const SizedBox(width: 20),
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.camera_alt, color: Colors.purple, size: 40)),
-                        const SizedBox(width: 20),
-                        IconButton(
-                            onPressed: () async {
-                              final userCredential = await AuthService.signInWithGoogle();
-                              await _handleSocialSignIn(userCredential);
-                            },
-                            icon: const Icon(Icons.g_mobiledata, color: Colors.green, size: 50)),
+                        _buildTextField('Nombres', _nombresController),
+                        _buildTextField('Apellidos', _apellidosController),
+                        _buildTextField('N. Documento', _documentoController),
+                        _buildTextField('Teléfono', _telefonoController, hint: 'Ej: 3123251106'),
+                        _buildTextField('Email', _emailController),
+                        _buildTextField('Fecha Nacimiento (YYYY-MM-DD)', _fechaNacimientoController),
+                        _buildTextField('Contraseña', _passwordController, isPassword: true),
+                        _buildTextField('Confirmar Contraseña', _confirmPasswordController, isPassword: true),
+                        _buildTextField('Rol (admin/conductor/usuario)', _rolController, isLast: true),
                       ],
                     ),
-                    const SizedBox(height: 30),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 25,
-            left: 5,
-            child: SafeArea(
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _enviarDatos,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, minimumSize: const Size(double.infinity, 50)),
+                    child: const Text('Regístrate', style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),
@@ -337,21 +188,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(String label, {TextEditingController? controller, bool isPassword = false, bool isLast = false, String? hint}) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool isPassword = false, bool isLast = false, String? hint}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 5 : 20.0),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 15),
       child: TextField(
         controller: controller,
         obscureText: isPassword,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          labelStyle: const TextStyle(color: Colors.grey),
-          contentPadding: const EdgeInsets.only(bottom: 10),
-          isDense: true,
-          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey, width: 0.5)),
-          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 1.5)),
-        ),
+        decoration: InputDecoration(labelText: label, hintText: hint, isDense: true),
       ),
     );
   }

@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'admin_verification_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
+  // 1. Agregamos la variable para recibir los datos
+  final Map<String, dynamic> userData;
+
+  // 2. Actualizamos el constructor (Quitamos el const global porque userData es dinámico)
+  const RoleSelectionScreen({super.key, required this.userData});
 
   void _navigateToVerification(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AdminVerificationScreen()),
+      MaterialPageRoute(
+        // 3. Si tu AdminVerificationScreen también necesita los datos, pásalos aquí
+        builder: (context) => const AdminVerificationScreen(),
+      ),
     );
   }
 
@@ -22,12 +29,13 @@ class RoleSelectionScreen extends StatelessWidget {
           Container(
             height: 150,
             color: Colors.red,
-            child: const SafeArea(
+            child: SafeArea(
               child: Center(
                 child: Text(
-                  '¿Es usted administrador, \nconductor o usuario?',
+                  // 4. OPCIONAL: Puedes saludar al usuario usando sus datos
+                  '¿Qué rol tendrás hoy,\n${userData['nombre'] ?? 'Usuario'}?',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -48,21 +56,21 @@ class RoleSelectionScreen extends StatelessWidget {
                     label: 'Administrador',
                     color: const Color(0xFFF39C12),
                     iconBackgroundColor: const Color(0xFFFDEBD0),
-                    onTap: () => _navigateToVerification(context), // Navega
+                    onTap: () => _navigateToVerification(context),
                   ),
                   _buildRoleOption(
                     icon: Icons.directions_car,
                     label: 'Conductor',
                     color: const Color(0xFF2ECC71),
                     iconBackgroundColor: const Color(0xFFD5F5E3),
-                    onTap: () => _navigateToVerification(context), // Navega
+                    onTap: () => _navigateToVerification(context),
                   ),
                   _buildRoleOption(
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
                     iconBackgroundColor: const Color(0xFFF4F6C3),
-                    onTap: () => _navigateToVerification(context), // Navega
+                    onTap: () => _navigateToVerification(context),
                   ),
                 ],
               ),
@@ -73,7 +81,6 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // Widget helper actualizado
   Widget _buildRoleOption({
     required IconData icon,
     required String label,

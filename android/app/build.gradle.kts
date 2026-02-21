@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    // El namespace debe permanecer igual para no romper las referencias de Java/Kotlin
     namespace = "com.transtunja.transtunja"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -20,20 +21,20 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.transtunja.transtunja"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // NUEVA IDENTIDAD: Esto soluciona el error "No se ha instalado la aplicación"
+        applicationId = "com.transtunja.app.v2" 
+        
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        
+        // Versión incrementada para asegurar que el sistema note el cambio
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -42,3 +43,6 @@ android {
 flutter {
     source = "../.."
 }
+
+// Activa Firebase para que funcione el SMS y desaparezca la pantalla negra
+apply(plugin = "com.google.gms.google-services")
