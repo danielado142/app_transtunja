@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -19,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Variables para nuevas funcionalidades
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
@@ -28,6 +26,32 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // --- LÓGICA DE NAVEGACIÓN FLEXIBLE (CORREGIDA) ---
+  void _navegarSegunRol(dynamic rolValue) {
+    if (!mounted) return;
+
+    // Limpiamos el valor recibido para evitar errores de espacios o tipos
+    String rolStr = rolValue.toString().trim();
+    print("DEBUG: Rol detectado en sistema: '$rolStr'");
+
+    // Si el rol es "1" o "0", lo enviamos al mapa de pasajero para evitar bloqueos
+    if (rolStr == "1" || rolStr == "0") {
+      Navigator.pushReplacementNamed(context, '/mapa_pasajero');
+    }
+    else if (rolStr == "2") {
+      Navigator.pushReplacementNamed(context, '/home_conductor');
+    }
+    else if (rolStr == "3") {
+      Navigator.pushReplacementNamed(context, '/home_admin');
+    }
+    else {
+      // Si llega cualquier otro valor (como "administrador" antes de la corrección)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Acceso restringido. Rol: $rolStr")),
+      );
+    }
   }
 
   Future<void> _handleSocialSignIn(UserCredential? userCredential) async {
@@ -40,24 +64,20 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final email = userCredential.user?.email;
-    // IP configurada para tu red local
-    const String domain = kIsWeb ? 'localhost' : '192.168.0.103';
-    final url = Uri.parse('http://$domain/TransTunja/get_user_role.php?correo=$email');
+    const String domain = kIsWeb ? 'localhost' : '192.168.90.54';
+    final url = Uri.parse('http://$domain/TransTunja/login.php');
 
     try {
-      final response = await http.get(url, headers: {"Accept": "application/json"});
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"username": email, "social_login": true}),
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          final String rol = data['idRol'].toString().toLowerCase();
-          String routeName;
-          if (rol.contains('pasajero') || rol == '1') routeName = '/home_pasajero';
-          else if (rol.contains('conductor') || rol == '2') routeName = '/home_conductor';
-          else if (rol.contains('admin') || rol == '3') routeName = '/home_admin';
-          else return;
-
-          if (!mounted) return;
-          Navigator.pushReplacementNamed(context, routeName);
+          _navegarSegunRol(data['rol']);
         } else {
           if (!mounted) return;
           Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen(userData: {'email': email})));
@@ -72,34 +92,26 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1E6E6), // Color de fondo según imagen
+      backgroundColor: const Color(0xFFF1E6E6),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 40.0),
         child: Column(
           children: <Widget>[
             const SizedBox(height: 100),
-            // Contenedor principal con bordes redondeados y sombra
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 40.0),
               decoration: BoxDecoration(
-                color: const Color(0xFFE5E5E5), // Color gris claro de la caja
+                color: const Color(0xFFE5E5E5),
                 borderRadius: BorderRadius.circular(45.0),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  )
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
                 ],
               ),
               child: Column(
                 children: [
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      border: UnderlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Correo electrónico o Usuario', border: UnderlineInputBorder()),
                   ),
                   const SizedBox(height: 25),
                   TextFormField(
@@ -118,21 +130,49 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 15),
-            // Checkbox Recuérdame
             Row(
               children: [
-                Checkbox(
-                  value: _rememberMe,
-                  onChanged: (val) => setState(() => _rememberMe = val!),
-                  activeColor: Colors.red,
-                ),
+                Checkbox(value: _rememberMe, onChanged: (val) => setState(() => _rememberMe = val!), activeColor: Colors.red),
                 const Text("Recuerdame", style: TextStyle(fontSize: 14)),
               ],
             ),
             const SizedBox(height: 15),
-            // Botón Inicia Sesión
+
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () async {
+                String user = _emailController.text.trim();
+                String pass = _passwordController.text.trim();
+
+                if (user.isNotEmpty && pass.isNotEmpty) {
+                  const String domain = kIsWeb ? 'localhost' : '192.168.90.54';
+                  final url = Uri.parse("http://$domain/TransTunja/login.php");
+
+                  try {
+                    final response = await http.post(
+                      url,
+                      headers: {"Content-Type": "application/json"},
+                      body: jsonEncode({"username": user, "password": pass}),
+                    ).timeout(const Duration(seconds: 10));
+
+                    if (response.statusCode == 200) {
+                      final data = jsonDecode(response.body);
+                      if (data['success'] == true) {
+                        _navegarSegunRol(data['rol']);
+                      } else {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Usuario o contraseña incorrectos")),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error de conexión: $e")));
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Por favor llena todos los campos")));
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 minimumSize: const Size(double.infinity, 50),
@@ -140,8 +180,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: const Text('Inicia sesión', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             ),
+
             const SizedBox(height: 20),
-            // ¿Olvidaste tu contraseña?
             TextButton(
               onPressed: () {},
               child: const Text("¿Olvidaste tu contraseña?", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
@@ -149,7 +189,6 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 20),
             const Text('O inicia sesión con'),
             const SizedBox(height: 20),
-            // Iconos sociales reales
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -165,7 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             const SizedBox(height: 40),
-            // Texto para ir al registro
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: GestureDetector(
@@ -183,17 +221,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Widget para botones sociales con tus imágenes reales
   Widget _buildSocialIcon(String assetPath, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Image.asset(
-        assetPath,
-        height: 45,
-        width: 45,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 40),
-      ),
+      child: Image.asset(assetPath, height: 45, width: 45, fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 40)),
     );
   }
 }

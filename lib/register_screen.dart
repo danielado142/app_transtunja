@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:transtunja/auth_service.dart';
-import 'package:transtunja/verification_screen.dart';
+import 'auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final Map<String, dynamic> userData;
-  const RegisterScreen({super.key, required this.userData});
+  final Map<String, dynamic>? userData;
+  const RegisterScreen({super.key, this.userData});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -14,8 +13,9 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controladores
+  // Controladores de texto
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _nombresController = TextEditingController();
   final _apellidosController = TextEditingController();
   final _dateController = TextEditingController();
@@ -28,11 +28,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedRol;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _aceptaTerminos = false; // Estado para el icono de selección
+  bool _aceptaTerminos = false;
 
   @override
   void dispose() {
     _usernameController.dispose();
+    _emailController.dispose();
     _nombresController.dispose();
     _apellidosController.dispose();
     _dateController.dispose();
@@ -49,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       initialDate: DateTime(2005),
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
+      locale: const Locale("es", "ES"),
     );
     if (picked != null) {
       setState(() => _dateController.text = DateFormat('yyyy-MM-dd').format(picked));
@@ -71,19 +73,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            Positioned(top: 25, left: 5, child: SafeArea(child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.of(context).pop()))),
-
+            Positioned(
+                top: 25,
+                left: 5,
+                child: SafeArea(
+                    child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                        onPressed: () => Navigator.of(context).pop()
+                    )
+                )
+            ),
             Padding(
               padding: const EdgeInsets.only(top: 60),
               child: Column(
                 children: [
                   const Text(
                     "Crea tu cuenta en segundos",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22, shadows: [Shadow(blurRadius: 10, color: Colors.black, offset: Offset(2, 2))]),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        shadows: [Shadow(blurRadius: 10, color: Colors.black, offset: Offset(2, 2))]
+                    ),
                   ),
                   const SizedBox(height: 30),
-
-                  // CAJA BLANCA (Solo campos)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 25),
                     child: Container(
@@ -103,17 +116,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             DropdownButtonFormField<String>(
                               value: _selectedDocumentType,
                               hint: const Text('Tipo documento'),
-                              items: ['Cédula de ciudadanía', 'Cédula de extranjería', 'Tarjeta de identidad'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                              items: ['CC', 'CE', 'TI'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
                               onChanged: (v) => setState(() => _selectedDocumentType = v),
                             ),
-                            TextFormField(controller: _documentoController, decoration: const InputDecoration(labelText: "N. Documento")),
+                            TextFormField(controller: _documentoController, decoration: const InputDecoration(labelText: "N. Documento"), keyboardType: TextInputType.number),
+
+                            // CAMPO: FECHA DE NACIMIENTO
                             TextFormField(
                               controller: _dateController,
                               readOnly: true,
                               onTap: _selectDate,
                               decoration: const InputDecoration(labelText: "Fecha de nacimiento", suffixIcon: Icon(Icons.calendar_today)),
                             ),
-                            TextFormField(controller: _telefonoController, decoration: const InputDecoration(labelText: "Número de Télefono")),
+
+                            // NUEVA UBICACIÓN: CORREO ELECTRÓNICO (Debajo de fecha)
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(labelText: "Correo Electrónico"),
+                              validator: (value) {
+                                if (value == null || value.isEmpty || !value.contains('@')) {
+                                  return "Ingresa un correo válido";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            TextFormField(controller: _telefonoController, decoration: const InputDecoration(labelText: "Número de Télefono"), keyboardType: TextInputType.phone),
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
@@ -129,11 +158,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 labelText: "Confirmar contraseña",
                                 suffixIcon: IconButton(icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword)),
                               ),
+                              validator: (value) => value != _passwordController.text ? "Las contraseñas no coinciden" : null,
                             ),
                             DropdownButtonFormField<String>(
                               value: _selectedRol,
                               hint: const Text('Selecciona tu rol'),
-                              items: ['Pasajero', 'Conductor', 'Administrador'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                              items: ['pasajero', 'conductor', 'administrador'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
                               onChanged: (v) => setState(() => _selectedRol = v),
                             ),
                           ],
@@ -141,11 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ),
-
-                  // ELEMENTOS FUERA DE LA CAJA BLANCA
                   const SizedBox(height: 15),
-
-                  // --- ICONO DE SELECCIÓN Y TEXTO ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
@@ -156,29 +182,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onChanged: (value) => setState(() => _aceptaTerminos = value!),
                         ),
                         const Expanded(
-                          child: Text(
-                            "Al registrarte aceptas nuestros Términos y Condiciones",
-                            style: TextStyle(fontSize: 12, color: Colors.black87),
-                          ),
+                          child: Text("Al registrarte aceptas nuestros Términos y Condiciones", style: TextStyle(fontSize: 12, color: Colors.black87)),
                         ),
                       ],
                     ),
                   ),
-
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: Column(
                       children: [
                         const SizedBox(height: 10),
                         ElevatedButton(
-                          onPressed: () {
-                            if(_aceptaTerminos) {
-                              // Tu lógica de registro
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Acepta los términos")));
+                          onPressed: () async {
+                            if(_formKey.currentState!.validate()) {
+                              if(_aceptaTerminos) {
+                                final datosParaGuardar = {
+                                  'username': _usernameController.text,
+                                  'email': _emailController.text,
+                                  'nombres': _nombresController.text,
+                                  'apellidos': _apellidosController.text,
+                                  'documento': _documentoController.text,
+                                  'password': _passwordController.text,
+                                  'telefono': _telefonoController.text,
+                                  'fechaNacimiento': _dateController.text,
+                                  'rol': _selectedRol ?? 'pasajero',
+                                };
+
+                                await AuthService().enviarCodigoVerificacion(
+                                  context: context,
+                                  userData: datosParaGuardar,
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Acepta los términos")));
+                              }
                             }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, minimumSize: const Size(double.infinity, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))
+                          ),
                           child: const Text("Regístrate", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(height: 20),
@@ -187,10 +230,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            _socialIcon('assets/images/facebook.png'),
-                            _socialIcon('assets/images/correo.png'),
-                            _socialIcon('assets/images/instagram.png'),
-                            _socialIcon('assets/images/google.png'),
+                            _socialIcon('assets/images/facebook.png', () => AuthService.signInWithFacebook()),
+                            _socialIcon('assets/images/google.png', () => AuthService.signInWithGoogle()),
                           ],
                         ),
                         const SizedBox(height: 30),
@@ -206,9 +247,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _socialIcon(String assetPath) {
+  Widget _socialIcon(String assetPath, VoidCallback onTap) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: Image.asset(assetPath, height: 45, width: 45, fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 40)),
     );

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-// Importaciones necesarias
+// Importaciones de tus pantallas
 import 'login_screen.dart';
 import 'register_screen.dart';
 import 'splash_screen.dart';
+import 'map_screen.dart'; // IMPORTANTE: Asegúrate de que este archivo exista
 
 void main() {
   runApp(const TransTunjaApp());
@@ -17,12 +19,29 @@ class TransTunjaApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TransTunja',
+
+      // --- CONFIGURACIÓN DE IDIOMA ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', 'ES'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('es', 'ES'),
+      // -------------------------------
+
       initialRoute: '/', // Inicia con el Splash
       routes: {
         '/': (context) => const SplashScreen(),
         '/welcome': (context) => const WelcomeScreen(),
-        '/login': (context) => const LoginScreen(), // Ruta al login
+        '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(userData: {}),
+
+        // --- RUTA DEL MAPA PARA PASAJEROS AGREGADA ---
+        '/mapa_pasajero': (context) => const MapScreen(),
       },
     );
   }
@@ -40,21 +59,20 @@ class WelcomeScreen extends StatelessWidget {
         child: Column(
           children: [
             const Spacer(flex: 2),
-            // Imagen del Bus
             Center(
               child: Image.asset(
                 'assets/images/transtunja_logo.png',
                 width: MediaQuery.of(context).size.width * 0.8,
                 fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.directions_bus, size: 100, color: Colors.red),
               ),
             ),
             const Spacer(flex: 2),
-            // Botón Entrar configurado correctamente
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
               child: ElevatedButton(
                 onPressed: () {
-                  // Esta instrucción te manda al inicio de sesión
                   Navigator.pushNamed(context, '/login');
                 },
                 style: ElevatedButton.styleFrom(
