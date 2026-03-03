@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'admin_verification_screen.dart';
+import '../administrador/admin_verification_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -10,9 +10,7 @@ class RoleSelectionScreen extends StatelessWidget {
   void _navigateToVerification(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AdminVerificationScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AdminVerificationScreen()),
     );
   }
 
@@ -28,7 +26,9 @@ class RoleSelectionScreen extends StatelessWidget {
               height: 180,
               decoration: const BoxDecoration(
                 color: Colors.red,
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(50)),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(50),
+                ),
               ),
               child: SafeArea(
                 child: Center(
@@ -45,7 +45,10 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 30.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 40.0,
+                vertical: 30.0,
+              ),
               child: Column(
                 children: [
                   _buildRoleOption(
@@ -69,7 +72,10 @@ class RoleSelectionScreen extends StatelessWidget {
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
                     iconBackgroundColor: const Color(0xFFF4F6C3),
-                    onTap: () => Navigator.pushReplacementNamed(context, '/mapa_pasajero'),
+                    onTap: () => Navigator.pushReplacementNamed(
+                      context,
+                      '/mapa_pasajero',
+                    ),
                   ),
                 ],
               ),
@@ -91,7 +97,10 @@ class RoleSelectionScreen extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(color: iconBackgroundColor, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: iconBackgroundColor,
+            shape: BoxShape.circle,
+          ),
           child: Icon(icon, size: 40, color: color),
         ),
         const SizedBox(height: 10),
@@ -100,11 +109,17 @@ class RoleSelectionScreen extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: color,
             minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
           ),
           child: Text(
-              label,
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)
+            label,
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
         ),
       ],

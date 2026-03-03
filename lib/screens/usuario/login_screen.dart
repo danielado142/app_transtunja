@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'register_screen.dart';
-import 'auth_service.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,14 +39,16 @@ class _LoginScreenState extends State<LoginScreen> {
     const String urlApi = 'http://192.168.0.102/TRANSTUNJA/login.php';
 
     try {
-      final response = await http.post(
-        Uri.parse(urlApi),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "correo": _emailController.text.trim(),
-          "contrasena": _passwordController.text.trim(),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse(urlApi),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "correo": _emailController.text.trim(),
+              "contrasena": _passwordController.text.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       final data = jsonDecode(response.body);
 
@@ -56,9 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
 
         Navigator.pushReplacementNamed(
-            context,
-            '/role_selection',
-            arguments: data['userData']
+          context,
+          '/role_selection',
+          arguments: data['userData'],
         );
       } else {
         if (!mounted) return;
@@ -69,9 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       debugPrint("❌ Error en Login: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error de conexión: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error de conexión: $e")));
     }
   }
 
@@ -85,12 +87,19 @@ class _LoginScreenState extends State<LoginScreen> {
           children: <Widget>[
             const SizedBox(height: 100),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 40.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 25.0,
+                vertical: 40.0,
+              ),
               decoration: BoxDecoration(
                 color: const Color(0xFFE5E5E5),
                 borderRadius: BorderRadius.circular(45.0),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
                 ],
               ),
               child: Column(
@@ -98,8 +107,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
-                        labelText: 'Correo electrónico o Usuario',
-                        border: UnderlineInputBorder()
+                      labelText: 'Correo electrónico o Usuario',
+                      border: UnderlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 25),
@@ -109,8 +118,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
                       suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.grey),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                       border: const UnderlineInputBorder(),
                     ),
@@ -122,9 +138,9 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               children: [
                 Checkbox(
-                    value: _rememberMe,
-                    onChanged: (val) => setState(() => _rememberMe = val!),
-                    activeColor: Colors.red
+                  value: _rememberMe,
+                  onChanged: (val) => setState(() => _rememberMe = val!),
+                  activeColor: Colors.red,
                 ),
                 const Text("Recuérdame", style: TextStyle(fontSize: 14)),
               ],
@@ -136,18 +152,30 @@ class _LoginScreenState extends State<LoginScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25.0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25.0),
+                ),
               ),
               child: const Text(
-                  'Inicia sesión',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                'Inicia sesión',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
 
             const SizedBox(height: 20),
             TextButton(
               onPressed: () {},
-              child: const Text("¿Olvidaste tu contraseña?", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text(
+                "¿Olvidaste tu contraseña?",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             const Text('O inicia sesión con'),
@@ -162,12 +190,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   UserCredential? user = await AuthService.signInWithFacebook();
                   if (user != null && mounted) {
                     Navigator.pushReplacementNamed(
-                        context,
-                        '/role_selection',
-                        arguments: {
-                          'nombreUsuario': user.user?.displayName,
-                          'correo': user.user?.email
-                        }
+                      context,
+                      '/role_selection',
+                      arguments: {
+                        'nombreUsuario': user.user?.displayName,
+                        'correo': user.user?.email,
+                      },
                     );
                   }
                 }),
@@ -177,12 +205,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   UserCredential? user = await AuthService.signInWithGoogle();
                   if (user != null && mounted) {
                     Navigator.pushReplacementNamed(
-                        context,
-                        '/role_selection',
-                        arguments: {
-                          'nombreUsuario': user.user?.displayName,
-                          'correo': user.user?.email
-                        }
+                      context,
+                      '/role_selection',
+                      arguments: {
+                        'nombreUsuario': user.user?.displayName,
+                        'correo': user.user?.email,
+                      },
                     );
                   }
                 }),
@@ -193,13 +221,19 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: GestureDetector(
                 onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RegisterScreen(userData: {}))
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisterScreen(userData: {}),
+                  ),
                 ),
                 child: const Text(
                   '¿Aún no tienes cuenta? Regístrate aquí.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.w600, fontSize: 16),
+                  style: TextStyle(
+                    color: Color(0xFFD32F2F),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -212,8 +246,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildSocialIcon(String assetPath, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Image.asset(assetPath, height: 45, width: 45, fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 40)),
+      child: Image.asset(
+        assetPath,
+        height: 45,
+        width: 45,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.error, size: 40),
+      ),
     );
   }
 }
