@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+<<<<<<< HEAD
 import 'package:transtunja/main.dart';
 
 void main() {
@@ -18,5 +19,25 @@ void main() {
     // Verify that our welcome screen shows the button and image.
     expect(find.text('Entrar'), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
+=======
+import 'package:app_transtunja/main.dart';
+
+void main() {
+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const MyApp());
+
+    // Verify that our counter starts at 0.
+    expect(find.text('0'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
+
+    // Tap the '+' icon and trigger a frame.
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
+
+    // Verify that our counter has incremented.
+    expect(find.text('0'), findsNothing);
+    expect(find.text('1'), findsOneWidget);
+>>>>>>> d63953f72626fa4d3a30f4bde7cb2bdcc0a42f4d
   });
 }

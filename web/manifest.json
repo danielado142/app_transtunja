@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "transtunja",
     "short_name": "transtunja",
+=======
+    "name": "app_transtunja",
+    "short_name": "app_transtunja",
+>>>>>>> d63953f72626fa4d3a30f4bde7cb2bdcc0a42f4d
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
