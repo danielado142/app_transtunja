@@ -1,12 +1,14 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // El Flutter Gradle Plugin debe aplicarse después de Android y Kotlin.
     id("dev.flutter.flutter-gradle-plugin")
+    // Activa Firebase para que funcione el SMS, Google y Facebook
+    id("com.google.gms.google-services")
 }
 
 android {
-    // El namespace debe permanecer igual para no romper las referencias de Java/Kotlin
+    // El namespace permanece igual para no romper referencias internas
     namespace = "com.transtunja.transtunja"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -21,7 +23,7 @@ android {
     }
 
     defaultConfig {
-        // NUEVA IDENTIDAD: Esto soluciona el error "No se ha instalado la aplicación"
+        // IDENTIDAD: Coincide con tu configuración en Firebase Console
         applicationId = "com.transtunja.app.v2" 
         
         minSdk = flutter.minSdkVersion
@@ -34,7 +36,7 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
+            // Configuración de firma para depuración/release
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -44,5 +46,12 @@ flutter {
     source = "../.."
 }
 
-// Activa Firebase para que funcione el SMS y desaparezca la pantalla negra
-apply(plugin = "com.google.gms.google-services")
+dependencies {
+    // Librerías de Redes Sociales (Facebook y Google Auth)
+    implementation("com.facebook.android:facebook-android-sdk:latest.release")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    
+    // Importa el BoM de Firebase para gestionar versiones automáticamente
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-auth")
+}

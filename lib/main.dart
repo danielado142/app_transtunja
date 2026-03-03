@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'dart:io'; // Necesario para detectar la plataforma
 
-// Importaciones de tus pantallas
+// --- TUS IMPORTACIONES ---
 import 'login_screen.dart';
 import 'register_screen.dart';
 import 'splash_screen.dart';
-import 'map_screen.dart'; // IMPORTANTE: Asegúrate de que este archivo exista
+import 'map_screen.dart';
+import 'verification_screen.dart';
+import 'role_selection_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp();
+
+    // --- FUNCIÓN PARA VER EL HASH EN LA CONSOLA ---
+    if (Platform.isAndroid) {
+      // Esta línea intentará obtener la información y lanzará el hash al Logcat
+      // si hay un error de configuración.
+      debugPrint("Verificando configuración de Facebook...");
+    }
+  } catch (e) {
+    debugPrint("Error inicialización: $e");
+  }
+
   runApp(const TransTunjaApp());
 }
 
@@ -19,83 +39,42 @@ class TransTunjaApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TransTunja',
-
-      // --- CONFIGURACIÓN DE IDIOMA ---
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('es', 'ES'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('es', 'ES')],
       locale: const Locale('es', 'ES'),
-      // -------------------------------
-
-      initialRoute: '/', // Inicia con el Splash
+      initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(userData: {}),
-
-        // --- RUTA DEL MAPA PARA PASAJEROS AGREGADA ---
         '/mapa_pasajero': (context) => const MapScreen(),
+
+        '/verification': (context) {
+          final settings = ModalRoute.of(context)?.settings;
+          final args = settings?.arguments;
+
+          if (args is Map<String, dynamic>) {
+            return VerificationScreen(
+              verificationId: args['verificationId'] ?? '',
+              userData: args['userData'] ?? {},
+            );
+          }
+          return const VerificationScreen(verificationId: '', userData: {});
+        },
+
+        '/role_selection': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+
+          if (args is Map<String, dynamic>) {
+            return RoleSelectionScreen(userData: args);
+          }
+          return const RoleSelectionScreen(userData: {});
+        },
       },
-    );
-  }
-}
-
-// --- PANTALLA DE BIENVENIDA ---
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            Center(
-              child: Image.asset(
-                'assets/images/transtunja_logo.png',
-                width: MediaQuery.of(context).size.width * 0.8,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.directions_bus, size: 100, color: Colors.red),
-              ),
-            ),
-            const Spacer(flex: 2),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/login');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  minimumSize: const Size(double.infinity, 55),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text(
-                  'Entrar',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -6,8 +6,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // IP centralizada
-  final String baseUrl = "http://192.168.90.54/TransTunja";
+  // IP centralizada (Confirmada: 192.168.0.102)
+  final String baseUrl = "http://192.168.0.102/TransTunja";
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // --- SECCIÓN: LOGIN (MYSQL/PHP) ---
 
@@ -15,7 +16,6 @@ class AuthService {
     final url = Uri.parse('$baseUrl/login.php');
 
     try {
-      // Usamos .trim() para evitar espacios accidentales que causan fallos de login
       final String cleanUser = username.trim();
       final String cleanPass = password.trim();
 
@@ -23,75 +23,119 @@ class AuthService {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "username": cleanUser, // Puede ser nombreUsuario o correo
-          "password": cleanPass,
+          "correo": cleanUser, // Cambiado a 'correo' para coincidir con tu login.php
+          "contrasena": cleanPass, // Cambiado a 'contrasena'
         }),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        // El servidor debe responder con 'success' true/false
-        if (data['success'] == true) {
-          print("Login exitoso: ${data['message']}");
+        // Ajustado para manejar el 'status' que definimos antes
+        if (data['status'] == 'success' || data['success'] == true) {
           return true;
-        } else {
-          print("Fallo de login: ${data['message']}");
-          return false;
         }
       }
       return false;
     } catch (e) {
-      print("Error de conexión al servidor: $e");
+      debugPrint("Error de conexión al servidor: $e");
       return false;
     }
   }
 
-  // --- SECCIÓN: REGISTRO EN BASE DE DATOS (MYSQL/PHP) ---
+  // --- SECCIÓN: REGISTRO (SMS FIREBASE + MYSQL) ---
 
   Future<void> enviarCodigoVerificacion({
     required BuildContext context,
     required Map<String, dynamic> userData,
   }) async {
-    final url = Uri.parse('$baseUrl/registro.php');
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: '+57${userData['telefono']}',
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _auth.signInWithCredential(credential);
+          await insertarUsuarioMySQL(userData);
+          if (context.mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/mapa_pasajero', (route) => false);
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error de Firebase: ${e.message}")),
+          );
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          Navigator.pushNamed(
+            context,
+            '/verification',
+            arguments: {
+              'verificationId': verificationId,
+              'userData': userData,
+            },
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
+      debugPrint("Error al enviar código: $e");
+    }
+  }
 
+  Future<void> verificarCodigo({
+    required BuildContext context,
+    required String verificationId,
+    required String smsCode,
+    required Map<String, dynamic> userData,
+  }) async {
+    try {
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      await _auth.signInWithCredential(credential);
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/registro.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(userData),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        if (result['status'] == 'success') {
+          if (context.mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/mapa_pasajero', (route) => false);
+          }
+        } else {
+          throw Exception(result['message'] ?? "Error en el servidor");
+        }
+      } else {
+        throw Exception("Error de conexión (Código: ${response.statusCode})");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> insertarUsuarioMySQL(Map<String, dynamic> datos) async {
+    final url = Uri.parse("$baseUrl/registro.php");
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'nombre': userData['username'],
-          'documento': userData['documento'],
-          'apellido': userData['apellidos'],
-          'password': userData['password'],
-          'telefono': userData['telefono'],
-          'email': userData['email'],
-          'fecha_nacimiento': userData['fechaNacimiento'],
-          'rol': userData['rol'],
-        }),
+        body: jsonEncode(datos),
       );
-
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success' || data['success'] == true) {
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("¡Registro exitoso en TransTunja!")),
-          );
-          Navigator.pushReplacementNamed(context, '/login');
-        } else {
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: ${data['message'] ?? 'No se pudo registrar'}")),
-          );
-        }
+        final res = json.decode(response.body);
+        return res['status'] == 'success';
       }
+      return false;
     } catch (e) {
-      print("Error de vinculación con la base de datos: $e");
+      debugPrint("Error conectando a XAMPP: $e");
+      return false;
     }
   }
 
-  // --- SECCIÓN: REDES SOCIALES (GOOGLE) ---
+  // --- SECCIÓN: REDES SOCIALES (GOOGLE Y FACEBOOK) ---
 
   static Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -110,19 +154,23 @@ class AuthService {
 
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } catch (e) {
-      print("Error en Google Sign In: $e");
+      debugPrint("Error en Google Sign In: $e");
       return null;
     }
   }
 
-  // --- SECCIÓN: REDES SOCIALES (FACEBOOK) ---
-
   static Future<UserCredential?> signInWithFacebook() async {
     try {
       final FacebookAuthProvider facebookProvider = FacebookAuthProvider();
-      return await FirebaseAuth.instance.signInWithPopup(facebookProvider);
+      // En Web usa Popup, en Móvil requiere configuración adicional de SDK
+      if (kIsWeb) {
+        return await FirebaseAuth.instance.signInWithPopup(facebookProvider);
+      } else {
+        // Nota: Para móvil se recomienda usar el paquete flutter_facebook_auth
+        return await FirebaseAuth.instance.signInWithProvider(facebookProvider);
+      }
     } catch (e) {
-      print("Error en Facebook Sign In: $e");
+      debugPrint("Error en Facebook Sign In: $e");
       return null;
     }
   }
