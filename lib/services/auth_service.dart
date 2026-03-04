@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // IP centralizada (Confirmada: 192.168.0.102)
-  final String baseUrl = "http://192.168.0.102/TransTunja";
+  // IP centralizada (Confirmada: 192.168.0.103)
+  final String baseUrl = "http://192.168.0.103/TransTunja";
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // --- SECCIÓN: LOGIN (MYSQL/PHP) ---
@@ -19,14 +19,17 @@ class AuthService {
       final String cleanUser = username.trim();
       final String cleanPass = password.trim();
 
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "correo": cleanUser, // Cambiado a 'correo' para coincidir con tu login.php
-          "contrasena": cleanPass, // Cambiado a 'contrasena'
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "correo":
+                  cleanUser, // Cambiado a 'correo' para coincidir con tu login.php
+              "contrasena": cleanPass, // Cambiado a 'contrasena'
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -55,7 +58,11 @@ class AuthService {
           await _auth.signInWithCredential(credential);
           await insertarUsuarioMySQL(userData);
           if (context.mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/mapa_pasajero', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/mapa_pasajero',
+              (route) => false,
+            );
           }
         },
         verificationFailed: (FirebaseAuthException e) {
@@ -67,10 +74,7 @@ class AuthService {
           Navigator.pushNamed(
             context,
             '/verification',
-            arguments: {
-              'verificationId': verificationId,
-              'userData': userData,
-            },
+            arguments: {'verificationId': verificationId, 'userData': userData},
           );
         },
         codeAutoRetrievalTimeout: (String verificationId) {},
@@ -93,17 +97,23 @@ class AuthService {
       );
       await _auth.signInWithCredential(credential);
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/registro.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(userData),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/registro.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(userData),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         if (result['status'] == 'success') {
           if (context.mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/mapa_pasajero', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/mapa_pasajero',
+              (route) => false,
+            );
           }
         } else {
           throw Exception(result['message'] ?? "Error en el servidor");
@@ -140,13 +150,17 @@ class AuthService {
   static Future<UserCredential?> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = kIsWeb
-          ? GoogleSignIn(clientId: "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com")
+          ? GoogleSignIn(
+              clientId:
+                  "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
+            )
           : GoogleSignIn();
 
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return null;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,

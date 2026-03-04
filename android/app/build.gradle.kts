@@ -1,26 +1,31 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    // El plugin de Flutter
     id("dev.flutter.flutter-gradle-plugin")
+    // --- ESTA ES LA LÍNEA QUE FALTABA PARA FIREBASE ---
     id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.app_transtunja"
+    // Coincide con tu JSON: com.transtunja.app.v2
+    namespace = "com.transtunja.app.v2"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
-        applicationId = "com.example.app_transtunja"
+        // Coincide con tu JSON: com.transtunja.app.v2
+        applicationId = "com.transtunja.app.v2"
+        
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

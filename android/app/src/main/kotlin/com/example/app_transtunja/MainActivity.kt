@@ -1,4 +1,4 @@
-package com.example.app_transtunja
+package com.transtunja.app.v2
 
 import io.flutter.embedding.android.FlutterActivity
 
