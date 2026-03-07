@@ -7,20 +7,17 @@ import 'pantalla_bienvenida.dart';
 import 'package:app_transtunja/screens/usuario/login_screen.dart';
 import 'package:app_transtunja/screens/usuario/register_screen.dart';
 import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
-import 'package:app_transtunja/screens/usuario/verification_screen.dart'; // Asegúrate que esta ruta sea correcta
+// Asegúrate de que este archivo contenga la clase SmsVerificationScreen
+import 'package:app_transtunja/screens/usuario/verification_screen.dart';
 
 Future<void> main() async {
-  // 1. Esto es vital para que las promesas (async) funcionen en el main
   WidgetsFlutterBinding.ensureInitialized();
-
   try {
-    // 2. Inicializar Firebase
     await Firebase.initializeApp();
-    print("✅ Firebase conectado con éxito");
+    debugPrint("✅ Firebase conectado con éxito");
   } catch (e) {
-    print("❌ Error conectando Firebase: $e");
+    debugPrint("❌ Error conectando Firebase: $e");
   }
-
   runApp(const MyApp());
 }
 
@@ -32,24 +29,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'TransTunja',
       debugShowCheckedModeBanner: false,
-
-      // Configuración de idiomas (Calendario)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
-
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-
-      // Pantalla principal al abrir la app
       home: const PantallaBienvenida(),
-
-      // MANEJO DE RUTAS (Aquí es donde se definen los saltos entre pantallas)
       onGenerateRoute: (settings) {
         // Ruta para Selección de Rol
         if (settings.name == '/role_selection') {
@@ -59,11 +49,12 @@ class MyApp extends StatelessWidget {
           );
         }
 
-        // RUTA PARA VERIFICACIÓN (Esto es lo que te faltaba)
+        // CORRECCIÓN AQUÍ: Cambiamos VerificationScreen por SmsVerificationScreen
         if (settings.name == '/verification') {
           final args = settings.arguments as Map<String, dynamic>? ?? {};
           return MaterialPageRoute(
-            builder: (context) => VerificationScreen(
+            builder: (context) => SmsVerificationScreen(
+              // <--- NOMBRE ACTUALIZADO
               verificationId: args['verificationId'] ?? '',
               userData: args['userData'] ?? {},
             ),
@@ -71,7 +62,6 @@ class MyApp extends StatelessWidget {
         }
         return null;
       },
-
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),

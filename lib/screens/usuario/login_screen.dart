@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'register_screen.dart';
+// Asegúrate de que este sea el nombre exacto de tu archivo en la carpeta
+import 'recuperacion_password.dart';
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -54,9 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (data['status'] == 'success') {
         debugPrint("✅ Bienvenido: ${data['userData']['nombreUsuario']}");
-
         if (!mounted) return;
-
         Navigator.pushReplacementNamed(
           context,
           '/role_selection',
@@ -167,8 +167,18 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
 
             const SizedBox(height: 20),
+
+            // --- BOTÓN CORREGIDO ---
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                debugPrint("Navegando a recuperación...");
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RecuperacionPasswordScreen(),
+                  ),
+                );
+              },
               child: const Text(
                 "¿Olvidaste tu contraseña?",
                 style: TextStyle(
@@ -177,15 +187,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
             const Text('O inicia sesión con'),
             const SizedBox(height: 20),
 
-            // --- SECCIÓN DE REDES SOCIALES INTEGRADA ---
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Botón Facebook
                 _buildSocialIcon('assets/images/facebook.png', () async {
                   UserCredential? user = await AuthService.signInWithFacebook();
                   if (user != null && mounted) {
@@ -200,7 +209,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                 }),
                 const SizedBox(width: 40),
-                // Botón Google
                 _buildSocialIcon('assets/images/google.png', () async {
                   UserCredential? user = await AuthService.signInWithGoogle();
                   if (user != null && mounted) {
@@ -217,23 +225,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             const SizedBox(height: 40),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RegisterScreen(userData: {}),
-                  ),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RegisterScreen(userData: {}),
                 ),
-                child: const Text(
-                  '¿Aún no tienes cuenta? Regístrate aquí.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFFD32F2F),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+              ),
+              child: const Text(
+                '¿Aún no tienes cuenta? Regístrate aquí.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFD32F2F),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
                 ),
               ),
             ),

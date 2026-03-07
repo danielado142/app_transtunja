@@ -1,16 +1,81 @@
 import 'package:flutter/material.dart';
+
 import '../administrador/admin_verification_screen.dart';
+import '../conductor/verificacion_conductor.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
 
-  // CORRECCIÓN: Ahora el constructor es constante
   const RoleSelectionScreen({super.key, required this.userData});
 
-  void _navigateToVerification(BuildContext context) {
+  void _goToAdmin(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AdminVerificationScreen()),
+    );
+  }
+
+  void _goToDriver(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DriverVerificationScreen()),
+    );
+  }
+
+  // --- NUEVA ALERTA PARA EL ROL DE USUARIO ---
+  void _showUserAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(
+          0xFFFDF2F2,
+        ), // Fondo sutil igual que los otros
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            // Ícono de persona para el Usuario
+            const Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
+            const SizedBox(height: 25),
+            const Text(
+              '¡Acceso Confirmado!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Has ingresado como Pasajero.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 17, color: Colors.black54),
+            ),
+            const SizedBox(height: 15),
+          ],
+        ),
+        actions: [
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Cierra la alerta
+                Navigator.pushReplacementNamed(context, '/mapa_pasajero');
+              },
+              child: const Text(
+                "Aceptar",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFFC0392B), // Rojo oscuro coherente
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -20,10 +85,10 @@ class RoleSelectionScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               height: 180,
+              width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.red,
                 borderRadius: BorderRadius.only(
@@ -45,37 +110,29 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 40.0,
-                vertical: 30.0,
-              ),
+              padding: const EdgeInsets.all(40.0),
               child: Column(
                 children: [
                   _buildRoleOption(
                     icon: Icons.security,
                     label: 'Administrador',
                     color: const Color(0xFFF39C12),
-                    iconBackgroundColor: const Color(0xFFFDEBD0),
-                    onTap: () => _navigateToVerification(context),
+                    onTap: () => _goToAdmin(context),
                   ),
                   const SizedBox(height: 30),
                   _buildRoleOption(
                     icon: Icons.directions_car,
                     label: 'Conductor',
                     color: const Color(0xFF2ECC71),
-                    iconBackgroundColor: const Color(0xFFD5F5E3),
-                    onTap: () => _navigateToVerification(context),
+                    onTap: () => _goToDriver(context),
                   ),
                   const SizedBox(height: 30),
                   _buildRoleOption(
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
-                    iconBackgroundColor: const Color(0xFFF4F6C3),
-                    onTap: () => Navigator.pushReplacementNamed(
-                      context,
-                      '/mapa_pasajero',
-                    ),
+                    onTap: () =>
+                        _showUserAlert(context), // <--- Funcionalidad añadida
                   ),
                 ],
               ),
@@ -90,17 +147,13 @@ class RoleSelectionScreen extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
-    required Color iconBackgroundColor,
     required VoidCallback onTap,
   }) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: iconBackgroundColor,
-            shape: BoxShape.circle,
-          ),
+        CircleAvatar(
+          radius: 35,
+          backgroundColor: color.withOpacity(0.2),
           child: Icon(icon, size: 40, color: color),
         ),
         const SizedBox(height: 10),
@@ -118,7 +171,6 @@ class RoleSelectionScreen extends StatelessWidget {
             style: const TextStyle(
               color: Colors.black,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
             ),
           ),
         ),

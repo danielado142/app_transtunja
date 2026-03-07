@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+// Mantengo tu clipper personalizado
 class TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -23,21 +24,22 @@ class TopCurveClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
-class VerificationScreen extends StatefulWidget {
+class SmsVerificationScreen extends StatefulWidget {
+  // <--- Nombre único
   final String verificationId;
   final Map<String, dynamic> userData;
 
-  const VerificationScreen({
+  const SmsVerificationScreen({
     super.key,
     required this.verificationId,
     required this.userData,
   });
 
   @override
-  State<VerificationScreen> createState() => _VerificationScreenState();
+  State<SmsVerificationScreen> createState() => _SmsVerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
+class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   final List<TextEditingController> _controllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -52,11 +54,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
     super.dispose();
   }
 
-  // --- FUNCIÓN DE ALERTA CON "X" FUNCIONAL ---
   void _mostrarAlertaError() {
     showDialog(
       context: context,
-      barrierDismissible: true, // Permite cerrar al tocar fuera
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
@@ -67,22 +68,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icono de "X" con función de cerrar
                 Align(
                   alignment: Alignment.topRight,
                   child: IconButton(
-                    onPressed: () =>
-                        Navigator.pop(context), // <--- ESTO CIERRA LA ALERTA
+                    onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.cancel, color: Colors.red, size: 35),
                   ),
                 ),
                 const Text(
                   "Código inválido",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -98,7 +93,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
     );
   }
 
-  // FUNCIÓN DE ENVÍO A MYSQL (IP .103)
   Future<void> _enviarAPhPMyAdmin() async {
     const String urlApi = 'http://192.168.0.103/TRANSTUNJA/registro.php';
     try {
@@ -124,10 +118,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
     }
   }
 
-  // FUNCIÓN PRINCIPAL DEL BOTÓN
   Future<void> _verificarCodigo() async {
     String smsCode = _controllers.map((c) => c.text).join();
-
     if (smsCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ingresa el código completo')),
@@ -155,9 +147,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         arguments: widget.userData,
       );
     } catch (e) {
-      if (mounted) {
-        _mostrarAlertaError(); // Se dispara si el código es incorrecto
-      }
+      if (mounted) _mostrarAlertaError();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
