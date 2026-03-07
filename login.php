@@ -9,32 +9,39 @@ include 'conexion.php';
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-// Respuesta por defecto si algo falla
+// Respuesta por defecto
 $response = ["status" => "error", "message" => "Ocurrió un error inesperado"];
 
 if(isset($data['correo']) && isset($data['contrasena'])) {
     $correo = $data['correo'];
-    $contrasena = $data['contrasena'];
+    $contrasena_ingresada = $data['contrasena'];
 
-    // Usar sentencias preparadas para evitar errores de caracteres especiales
-    $stmt = $conexion->prepare("SELECT * FROM usuario WHERE correo = ? AND contrasena = ?");
-    $stmt->bind_param("ss", $correo, $contrasena);
+    // CAMBIO CLAVE: Solo buscamos por correo para traer la contraseña encriptada
+    $stmt = $conexion->prepare("SELECT * FROM usuario WHERE correo = ?");
+    $stmt->bind_param("s", $correo);
     $stmt->execute();
     $resultado = $stmt->get_result();
 
     if ($resultado->num_rows > 0) {
         $usuario = $resultado->fetch_assoc();
-        $response = [
-            "status" => "success",
-            "message" => "¡Bienvenido!",
-            "userData" => $usuario
-        ];
+        $hash_en_bd = $usuario['contrasena']; // Esta es la clave encriptada
+
+        // VERIFICACIÓN DE SEGURIDAD
+        if (password_verify($contrasena_ingresada, $hash_en_bd)) {
+            $response = [
+                "status" => "success",
+                "message" => "¡Bienvenido!",
+                "userData" => $usuario
+            ];
+        } else {
+            $response = ["status" => "error", "message" => "Contraseña incorrecta"];
+        }
     } else {
-        $response = ["status" => "error", "message" => "Credenciales incorrectas"];
+        $response = ["status" => "error", "message" => "El correo no está registrado"];
     }
 }
 
-// 2. Asegurarte de que SOLO se imprima el JSON y NADA MÁS
+// 2. Asegurarte de que SOLO se imprima el JSON
 echo json_encode($response);
 exit; 
 ?>
