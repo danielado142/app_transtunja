@@ -1,14 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'route_detail_screen.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   final VoidCallback onGoToRoutes;
 
   const MapScreen({super.key, required this.onGoToRoutes});
 
   @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  static const red = Color(0xFFD10000);
+
+  final MapController _mapController = MapController();
+
+  // Centro aproximado de Tunja
+  final LatLng _tunjaCenter = const LatLng(5.5353, -73.3678);
+
+  // Ruta demo
+  late final List<LatLng> _demoRoute = [
+    const LatLng(5.5353, -73.3678),
+    const LatLng(5.5364, -73.3666),
+    const LatLng(5.5376, -73.3654),
+    const LatLng(5.5388, -73.3642),
+    const LatLng(5.5398, -73.3633),
+  ];
+
+  // Paraderos demo
+  late final List<_BusStop> _stops = [
+    const _BusStop(
+      name: 'Plaza Real',
+      position: LatLng(5.5353, -73.3678),
+      isMain: true,
+    ),
+    const _BusStop(
+      name: 'Parque Santander',
+      position: LatLng(5.5376, -73.3654),
+    ),
+    const _BusStop(name: 'UPTC', position: LatLng(5.5398, -73.3633)),
+  ];
+
+  void _goToMyLocation() {
+    _mapController.move(_tunjaCenter, 15.0);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Datos fake (luego lo conectamos a backend)
     const stopName = 'Plaza Real';
     const etaText = '4 min';
     const routeName = 'Centro - UPTC';
@@ -17,20 +58,88 @@ class MapScreen extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
-            // MAPA (placeholder)
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.grey.shade300,
-              child: const Center(
-                child: Text(
-                  'MAPA (placeholder)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _tunjaCenter,
+                initialZoom: 14.5,
+                minZoom: 12,
+                maxZoom: 18,
               ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.app_transtunja',
+                ),
+                PolylineLayer(
+                  polylines: [
+                    Polyline(points: _demoRoute, strokeWidth: 5, color: red),
+                  ],
+                ),
+                MarkerLayer(
+                  markers: [
+                    ..._stops.map(
+                      (stop) => Marker(
+                        point: stop.position,
+                        width: 90,
+                        height: 70,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                stop.name,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.location_pin,
+                              size: stop.isMain ? 38 : 32,
+                              color: stop.isMain ? red : Colors.black87,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Marker(
+                      point: const LatLng(5.5388, -73.3642),
+                      width: 44,
+                      height: 44,
+                      child: const Icon(
+                        Icons.directions_bus,
+                        size: 34,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                RichAttributionWidget(
+                  attributions: const [
+                    TextSourceAttribution('OpenStreetMap contributors'),
+                  ],
+                ),
+              ],
             ),
 
-            // Degradado suave arriba
             Positioned(
               top: 0,
               left: 0,
@@ -49,7 +158,6 @@ class MapScreen extends StatelessWidget {
               ),
             ),
 
-            // BUSCADOR (tap -> bottom sheet)
             Positioned(
               top: 16,
               left: 16,
@@ -59,7 +167,6 @@ class MapScreen extends StatelessWidget {
               ),
             ),
 
-            // CHIPS
             Positioned(
               top: 78,
               left: 16,
@@ -71,13 +178,15 @@ class MapScreen extends StatelessWidget {
                     _QuickChip(
                       icon: Icons.alt_route,
                       label: 'Rutas populares',
-                      onTap: onGoToRoutes,
+                      onTap: widget.onGoToRoutes,
                     ),
                     const SizedBox(width: 10),
                     _QuickChip(
                       icon: Icons.place_outlined,
                       label: 'Paradas cercanas',
-                      onTap: () {},
+                      onTap: () {
+                        _mapController.move(_stops.first.position, 15.5);
+                      },
                     ),
                     const SizedBox(width: 10),
                     _QuickChip(
@@ -90,19 +199,17 @@ class MapScreen extends StatelessWidget {
               ),
             ),
 
-            // BOTÓN MI UBICACIÓN
             Positioned(
               right: 16,
               bottom: 190,
               child: FloatingActionButton(
-                onPressed: () {},
+                onPressed: _goToMyLocation,
                 backgroundColor: Colors.white,
                 elevation: 2,
                 child: const Icon(Icons.my_location, color: Colors.black87),
               ),
             ),
 
-            // TARJETA INFERIOR
             Positioned(
               left: 16,
               right: 16,
@@ -111,7 +218,7 @@ class MapScreen extends StatelessWidget {
                 stopName: stopName,
                 etaText: etaText,
                 routeName: routeName,
-                onGoToRoutes: onGoToRoutes,
+                onGoToRoutes: widget.onGoToRoutes,
                 onDetails: () {
                   Navigator.push(
                     context,
@@ -140,9 +247,21 @@ class MapScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _DestinationSheet(onGoToRoutes: onGoToRoutes),
+      builder: (_) => _DestinationSheet(onGoToRoutes: widget.onGoToRoutes),
     );
   }
+}
+
+class _BusStop {
+  final String name;
+  final LatLng position;
+  final bool isMain;
+
+  const _BusStop({
+    required this.name,
+    required this.position,
+    this.isMain = false,
+  });
 }
 
 class _SearchBarButton extends StatelessWidget {
@@ -279,8 +398,6 @@ class _BottomInfoCard extends StatelessWidget {
             style: const TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 12),
-
-          // ✅ Botones iguales (mismo estilo)
           Row(
             children: [
               Expanded(
