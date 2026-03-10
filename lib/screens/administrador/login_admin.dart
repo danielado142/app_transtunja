@@ -30,19 +30,22 @@ class _LoginAdminState extends State<LoginAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(color: Colors.white),
+        color: Colors.white,
+
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(24),
               constraints: const BoxConstraints(maxWidth: 420),
+
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo con fondo blanco
+                  // LOGO
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
+
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -54,19 +57,21 @@ class _LoginAdminState extends State<LoginAdmin> {
                         ),
                       ],
                     ),
+
                     child: Column(
                       children: [
                         Image.asset(
                           'assets/images/transtunja_logo.png',
                           height: 150,
+
                           errorBuilder: (context, error, stackTrace) {
-                            // Si no encuentra la imagen, muestra un ícono
                             return Container(
                               height: 150,
                               decoration: BoxDecoration(
                                 color: Colors.grey[200],
                                 borderRadius: BorderRadius.circular(10),
                               ),
+
                               child: Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -76,9 +81,11 @@ class _LoginAdminState extends State<LoginAdmin> {
                                       size: 70,
                                       color: Colors.red.shade700,
                                     ),
+
                                     const SizedBox(height: 10),
+
                                     Text(
-                                      'TRANSTUNJA',
+                                      "TRANSTUNJA",
                                       style: TextStyle(
                                         color: Colors.red.shade700,
                                         fontSize: 18,
@@ -94,18 +101,20 @@ class _LoginAdminState extends State<LoginAdmin> {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 40),
 
-                  // Título de acceso
                   const Text(
-                    'Acceso Administrador',
+                    "Acceso Administrador",
                     style: TextStyle(
-                      color: Color(0xFF1a1a1a),
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF1a1a1a),
                     ),
                   ),
+
                   const SizedBox(height: 10),
+
                   Container(
                     height: 3,
                     width: 60,
@@ -114,103 +123,71 @@ class _LoginAdminState extends State<LoginAdmin> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
+
                   const SizedBox(height: 40),
 
-                  // Campo de Usuario
+                  // USUARIO
                   TextField(
                     controller: _usuarioCtrl,
-                    style: const TextStyle(
-                      color: Color(0xFF1a1a1a),
-                      fontSize: 16,
-                    ),
+
                     decoration: InputDecoration(
-                      labelText: 'Usuario',
-                      labelStyle: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      labelText: "Usuario",
+
                       prefixIcon: Icon(
                         Icons.person,
                         color: Colors.red.shade700,
                       ),
-                      enabledBorder: OutlineInputBorder(
+
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
                     ),
                   ),
+
                   const SizedBox(height: 16),
 
-                  // Campo de Contraseña
+                  // CONTRASEÑA
                   TextField(
                     controller: _contrasenaCtrl,
                     obscureText: true,
-                    style: const TextStyle(
-                      color: Color(0xFF1a1a1a),
-                      fontSize: 16,
-                    ),
+
                     decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      labelStyle: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      labelText: "Contraseña",
+
                       prefixIcon: Icon(Icons.lock, color: Colors.red.shade700),
-                      enabledBorder: OutlineInputBorder(
+
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2,
-                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade700,
-                          width: 2.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
                     ),
                   ),
+
                   const SizedBox(height: 30),
 
-                  // Botón Ingresar
+                  // BOTON INGRESAR
                   SizedBox(
                     width: double.infinity,
                     height: 55,
+
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminDashboard(),
-                          ),
-                        );
-                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade700,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 10,
-                        shadowColor: Colors.red.withOpacity(0.5),
                       ),
+
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AdminDashboard(),
+                          ),
+                        );
+                      },
+
                       child: const Text(
-                        'INGRESAR',
+                        "INGRESAR",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
