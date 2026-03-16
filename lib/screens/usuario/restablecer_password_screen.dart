@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart'
-    as http; // Asegúrate de tener http en pubspec.yaml
-import 'dart:convert'; // Para jsonEncode y jsonDecode
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+// ✅ IMPORTANTE: Verifica que esta ruta sea la correcta en tu proyecto
+import 'package:app_transtunja/config/constants.dart';
 
 // --- CLIPPER PARA LA CURVA SUPERIOR ---
 class HeaderClipper extends CustomClipper<Path> {
@@ -25,7 +26,6 @@ class HeaderClipper extends CustomClipper<Path> {
 }
 
 class RestablecerPasswordScreen extends StatefulWidget {
-  // ERROR COMÚN: Asegúrate de que esta variable esté aquí para recibir el correo
   final String correo;
 
   const RestablecerPasswordScreen({super.key, required this.correo});
@@ -51,37 +51,32 @@ class _RestablecerPasswordScreenState extends State<RestablecerPasswordScreen> {
     super.dispose();
   }
 
-  // --- FUNCIÓN PARA VALIDAR Y ENVIAR A XAMPP ---
+  // --- FUNCIÓN CORREGIDA PARA XAMPP ---
   Future<void> _enviarNuevaPassword() async {
     final String p1 = _passwordController.text.trim();
     final String p2 = _confirmPasswordController.text.trim();
 
-    // 1. Validar campos vacíos
     if (p1.isEmpty || p2.isEmpty) {
       _mostrarAlerta("Por favor, llene ambos campos");
       return;
     }
 
-    // 2. Validar longitud (Mínimo 8)
     if (p1.length < 8) {
       _mostrarAlerta("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
-    // 3. Validar si tiene al menos un número
     if (!p1.contains(RegExp(r'[0-9]'))) {
       _mostrarAlerta("Debe incluir al menos un número");
       return;
     }
 
-    // 4. Validar carácter especial
     final RegExp specialCharRegExp = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
     if (!specialCharRegExp.hasMatch(p1)) {
       _mostrarAlerta("Debe incluir un carácter especial (ej: @, #, !)");
       return;
     }
 
-    // 5. Validar que coincidan
     if (p1 != p2) {
       _mostrarAlerta("Las contraseñas no coinciden");
       return;
@@ -90,30 +85,22 @@ class _RestablecerPasswordScreenState extends State<RestablecerPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // REVISA TU IP: Asegúrate de que siga siendo 192.168.0.103
+      // ✅ CAMBIO CLAVE: Usamos ApiConfig.baseUrl en lugar de escribir la IP
+      final String urlApi = '${ApiConfig.baseUrl}/actualizar_password.php';
+
       final response = await http
           .post(
-            Uri.parse(
-              'http://192.168.0.103/TransTunja/actualizar_password.php',
-            ),
-            body: jsonEncode({
-              'correo': widget
-                  .correo, //widget.correo accede al parámetro de la clase principal
-              'password': p1,
-            }),
+            Uri.parse(urlApi),
+            body: jsonEncode({'correo': widget.correo, 'password': p1}),
             headers: {'Content-Type': 'application/json'},
           )
-          .timeout(
-            const Duration(seconds: 10),
-          ); // Timeout por si el servidor no responde
+          .timeout(const Duration(seconds: 10));
 
       final data = jsonDecode(response.body);
 
       if (data['actualizado'] == true) {
         _mostrarAlerta("¡Contraseña actualizada con éxito!");
-
         Future.delayed(const Duration(seconds: 2), () {
-          // Regresa hasta la primera pantalla (Login)
           if (mounted) Navigator.popUntil(context, (route) => route.isFirst);
         });
       } else {
@@ -121,7 +108,7 @@ class _RestablecerPasswordScreenState extends State<RestablecerPasswordScreen> {
       }
     } catch (e) {
       _mostrarAlerta("Error de conexión. Revisa XAMPP y tu IP.");
-      print("Error detallado: $e");
+      debugPrint("Error detallado: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

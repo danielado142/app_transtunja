@@ -3,9 +3,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// ✅ Importaciones corregidas
+import 'package:app_transtunja/config/constants.dart';
 import 'register_screen.dart';
-// Asegúrate de que este sea el nombre exacto de tu archivo en la carpeta
 import 'recuperacion_password.dart';
+// ✅ Asegúrate de que la ruta sea la correcta para tu proyecto
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,8 +21,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // ✅ Instancia de AuthService para usar sus métodos
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false; // Añadido para feedback visual
 
   @override
   void dispose() {
@@ -29,16 +35,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- LOGIN TRADICIONAL (MYSQL) ---
   Future<void> _iniciarSesion() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor llena todos los campos")),
       );
       return;
     }
 
-    const String urlApi = 'http://192.168.0.103/TRANSTUNJA/login.php';
+    setState(() => _isLoading = true);
+
+    final String urlApi = '${ApiConfig.baseUrl}/login.php';
 
     try {
       final response = await http
@@ -55,7 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
-        debugPrint("✅ Bienvenido: ${data['userData']['nombreUsuario']}");
         if (!mounted) return;
         Navigator.pushReplacementNamed(
           context,
@@ -69,11 +76,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      debugPrint("❌ Error en Login: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error de conexión: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error de conexión con XAMPP: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -86,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: <Widget>[
             const SizedBox(height: 100),
+            // --- CONTENEDOR DE FORMULARIO ---
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 25.0,
@@ -135,6 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 15),
+
+            // --- RECUÉRDAME ---
             Row(
               children: [
                 Checkbox(
@@ -147,31 +158,66 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 15),
 
-            ElevatedButton(
-              onPressed: _iniciarSesion,
+            // --- BOTÓN INICIAR SESIÓN ---
+            _isLoading
+                ? const CircularProgressIndicator(color: Colors.red)
+                : ElevatedButton(
+                    onPressed: _iniciarSesion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25.0),
+                      ),
+                    ),
+                    child: const Text(
+                      'Inicia sesión',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+            const SizedBox(height: 15),
+
+            // --- BOTÓN GOOGLE CORREGIDO ---
+            ElevatedButton.icon(
+              icon: Image.asset(
+                'assets/images/google.png',
+                width: 24,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.account_circle),
+              ),
+              label: const Text("Continuar con Google"),
+              onPressed: () async {
+                // ✅ CAMBIO CLAVE: Usamos la instancia y pasamos el context
+                final userCredential = await _authService.signInWithGoogle(
+                  context,
+                );
+
+                if (userCredential != null && mounted) {
+                  // El AuthService ya maneja la navegación,
+                  // pero si quieres asegurar una ruta aquí puedes hacerlo.
+                  debugPrint(
+                    "Login exitoso con Google: ${userCredential.user?.email}",
+                  );
+                }
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25.0),
-                ),
-              ),
-              child: const Text(
-                'Inicia sesión',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  side: const BorderSide(color: Colors.grey),
                 ),
               ),
             ),
 
             const SizedBox(height: 20),
-
-            // --- BOTÓN CORREGIDO ---
             TextButton(
               onPressed: () {
-                debugPrint("Navegando a recuperación...");
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -188,50 +234,16 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
-            const Text('O inicia sesión con'),
-            const SizedBox(height: 20),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildSocialIcon('assets/images/facebook.png', () async {
-                  UserCredential? user = await AuthService.signInWithFacebook();
-                  if (user != null && mounted) {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/role_selection',
-                      arguments: {
-                        'nombreUsuario': user.user?.displayName,
-                        'correo': user.user?.email,
-                      },
-                    );
-                  }
-                }),
-                const SizedBox(width: 40),
-                _buildSocialIcon('assets/images/google.png', () async {
-                  UserCredential? user = await AuthService.signInWithGoogle();
-                  if (user != null && mounted) {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      '/role_selection',
-                      arguments: {
-                        'nombreUsuario': user.user?.displayName,
-                        'correo': user.user?.email,
-                      },
-                    );
-                  }
-                }),
-              ],
-            ),
             const SizedBox(height: 40),
             GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RegisterScreen(userData: {}),
-                ),
-              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisterScreen(userData: {}),
+                  ),
+                );
+              },
               child: const Text(
                 '¿Aún no tienes cuenta? Regístrate aquí.',
                 textAlign: TextAlign.center,
@@ -242,22 +254,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSocialIcon(String assetPath, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Image.asset(
-        assetPath,
-        height: 45,
-        width: 45,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.error, size: 40),
       ),
     );
   }

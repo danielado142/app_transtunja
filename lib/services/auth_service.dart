@@ -4,17 +4,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+// ✅ Import de tus constantes (IP de XAMPP)
+import 'package:app_transtunja/config/constants.dart';
 
 class AuthService {
-  // IP centralizada (Confirmada: 192.168.0.103)
-  final String baseUrl = "http://192.168.0.103/TransTunja";
+  final String baseUrl = ApiConfig.baseUrl;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // --- SECCIÓN: LOGIN (MYSQL/PHP) ---
-
+  // --- SECCIÓN 1: LOGIN TRADICIONAL (MYSQL/PHP) ---
   Future<bool> login(String username, String password) async {
     final url = Uri.parse('$baseUrl/login.php');
-
     try {
       final String cleanUser = username.trim();
       final String cleanPass = password.trim();
@@ -23,17 +22,12 @@ class AuthService {
           .post(
             url,
             headers: {"Content-Type": "application/json"},
-            body: jsonEncode({
-              "correo":
-                  cleanUser, // Cambiado a 'correo' para coincidir con tu login.php
-              "contrasena": cleanPass, // Cambiado a 'contrasena'
-            }),
+            body: jsonEncode({"correo": cleanUser, "contrasena": cleanPass}),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Ajustado para manejar el 'status' que definimos antes
         if (data['status'] == 'success' || data['success'] == true) {
           return true;
         }
@@ -45,8 +39,7 @@ class AuthService {
     }
   }
 
-  // --- SECCIÓN: REGISTRO (SMS FIREBASE + MYSQL) ---
-
+  // --- SECCIÓN 2: REGISTRO (SMS FIREBASE + MYSQL) ---
   Future<void> enviarCodigoVerificacion({
     required BuildContext context,
     required Map<String, dynamic> userData,
@@ -145,10 +138,12 @@ class AuthService {
     }
   }
 
-  // --- SECCIÓN: REDES SOCIALES (GOOGLE Y FACEBOOK) ---
+  // --- SECCIÓN 3: REDES SOCIALES (GOOGLE) ---
 
-  static Future<UserCredential?> signInWithGoogle() async {
+  // ✅ CORREGIDO: Eliminado 'static' y añadido (BuildContext context)
+  Future<UserCredential?> signInWithGoogle(BuildContext context) async {
     try {
+      // 1. Configuración de Google Sign In
       final GoogleSignIn googleSignIn = kIsWeb
           ? GoogleSignIn(
               clientId:
@@ -156,9 +151,11 @@ class AuthService {
             )
           : GoogleSignIn();
 
+      // 2. Iniciar flujo de Google
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return null;
 
+      // 3. Obtener credenciales de Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
@@ -166,26 +163,59 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      return await FirebaseAuth.instance.signInWithCredential(credential);
+      // 4. Autenticar en Firebase
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      User? user = userCredential.user;
+
+      // 5. ✅ LOGICA DE SINCRONIZACIÓN CON MYSQL (XAMPP)
+      if (user != null) {
+        final url = Uri.parse('${ApiConfig.baseUrl}/auth_google.php');
+
+        try {
+          final response = await http.post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "nombre": user.displayName ?? "Usuario Google",
+              "email": user.email,
+              "google_id": user.uid,
+              "foto": user.photoURL ?? "",
+            }),
+          );
+
+          if (response.statusCode == 200) {
+            debugPrint("Sincronizado con XAMPP: ${response.body}");
+            // Si la base de datos responde OK, navegamos al mapa
+            if (context.mounted) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/mapa_pasajero',
+                (route) => false,
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint("Error al enviar datos a XAMPP: $e");
+        }
+      }
+
+      return userCredential;
     } catch (e) {
-      debugPrint("Error en Google Sign In: $e");
+      debugPrint("Error en Google Sign-In: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error en Google: $e")));
+      }
       return null;
     }
   }
 
-  static Future<UserCredential?> signInWithFacebook() async {
-    try {
-      final FacebookAuthProvider facebookProvider = FacebookAuthProvider();
-      // En Web usa Popup, en Móvil requiere configuración adicional de SDK
-      if (kIsWeb) {
-        return await FirebaseAuth.instance.signInWithPopup(facebookProvider);
-      } else {
-        // Nota: Para móvil se recomienda usar el paquete flutter_facebook_auth
-        return await FirebaseAuth.instance.signInWithProvider(facebookProvider);
-      }
-    } catch (e) {
-      debugPrint("Error en Facebook Sign In: $e");
-      return null;
-    }
+  // Opcional: Implementación futura
+  Future<UserCredential?> signInWithFacebook() async {
+    debugPrint("Facebook no implementado aún");
+    return null;
   }
 }

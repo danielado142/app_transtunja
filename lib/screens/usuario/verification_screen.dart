@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+// ✅ Importamos la configuración centralizada
+import 'package:app_transtunja/config/constants.dart';
 
-// Mantengo tu clipper personalizado
 class TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -25,7 +26,6 @@ class TopCurveClipper extends CustomClipper<Path> {
 }
 
 class SmsVerificationScreen extends StatefulWidget {
-  // <--- Nombre único
   final String verificationId;
   final Map<String, dynamic> userData;
 
@@ -93,10 +93,13 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     );
   }
 
+  // --- FUNCIÓN CORREGIDA PARA USAR ApiConfig ---
   Future<void> _enviarAPhPMyAdmin() async {
-    const String urlApi = 'http://192.168.0.103/TRANSTUNJA/registro.php';
+    // ✅ Cambiamos la IP manual por la ruta dinámica
+    final String urlApi = '${ApiConfig.baseUrl}/registro.php';
+
     try {
-      await http.post(
+      final response = await http.post(
         Uri.parse(urlApi),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -113,6 +116,8 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
           'telefono': widget.userData['telefono']?.toString() ?? '',
         }),
       );
+
+      debugPrint("Respuesta XAMPP: ${response.body}");
     } catch (e) {
       debugPrint("❌ Error red PHP: $e");
     }
@@ -135,7 +140,10 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
         smsCode: smsCode,
       );
 
+      // Verificamos con Firebase
       await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Si el SMS es correcto, guardamos en tu base de datos XAMPP
       await _enviarAPhPMyAdmin();
 
       if (!mounted) return;
@@ -147,6 +155,7 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
         arguments: widget.userData,
       );
     } catch (e) {
+      debugPrint("Error en verificación: $e");
       if (mounted) _mostrarAlertaError();
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -255,9 +264,12 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
           border: InputBorder.none,
         ),
         onChanged: (value) {
-          if (value.isNotEmpty && index < 5)
+          if (value.isNotEmpty && index < 5) {
             _focusNodes[index + 1].requestFocus();
-          if (value.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
+          }
+          if (value.isEmpty && index > 0) {
+            _focusNodes[index - 1].requestFocus();
+          }
         },
       ),
     );

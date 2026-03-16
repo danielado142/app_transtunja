@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+// Importamos la configuración centralizada
+import 'package:app_transtunja/config/constants.dart';
 import '../../services/auth_service.dart';
 import 'verification_screen.dart';
 
@@ -32,6 +34,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   bool _aceptaTerminos = false;
   bool _isLoading = false;
+
+  // --- FUNCIÓN CORREGIDA PARA USAR LA IP DE CONSTANTS.DART ---
+  Future<bool> _enviarDatosDirecto(Map<String, dynamic> datos) async {
+    // Ya no escribimos la IP aquí, la traemos de ApiConfig
+    final String urlApi = '${ApiConfig.baseUrl}/registro.php';
+
+    try {
+      final response = await http.post(
+        Uri.parse(urlApi),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(datos),
+      );
+
+      // Log para depuración en consola
+      debugPrint("Intentando conectar a: $urlApi");
+
+      if (response.statusCode == 200) {
+        final respuestaJson = json.decode(response.body);
+        if (respuestaJson['status'] == 'success') {
+          debugPrint("✅ Guardado en MySQL con éxito");
+          return true;
+        } else {
+          debugPrint("❌ Error MySQL: ${respuestaJson['message']}");
+          return false;
+        }
+      } else {
+        debugPrint("❌ Error de Servidor: Código ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("❌ Error de red (Verifica tu IP en XAMPP): $e");
+      return false;
+    }
+  }
 
   void _mostrarTerminos() {
     showDialog(
@@ -81,28 +117,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!hasUppercase) return 'Debe tener al menos una mayúscula';
     if (!hasSpecialCharacters) return 'Debe tener un carácter especial';
     return null;
-  }
-
-  Future<bool> _enviarDatosDirecto(Map<String, dynamic> datos) async {
-    const String urlApi = 'http://192.168.0.103/TRANSTUNJA/registro.php';
-    try {
-      final response = await http.post(
-        Uri.parse(urlApi),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(datos),
-      );
-      final respuestaJson = json.decode(response.body);
-      if (response.statusCode == 200 && respuestaJson['status'] == 'success') {
-        debugPrint("✅ Guardado en MySQL con éxito");
-        return true;
-      } else {
-        debugPrint("❌ Error MySQL: ${respuestaJson['message']}");
-        return false;
-      }
-    } catch (e) {
-      debugPrint("❌ Error de red MySQL: $e");
-      return false;
-    }
   }
 
   @override
@@ -384,9 +398,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     'fechaNacimiento': _dateController.text,
                                     'idRol': _selectedRol ?? 'pasajero',
                                   };
+
                                   bool guardadoOk = await _enviarDatosDirecto(
                                     datosParaGuardar,
                                   );
+
                                   if (guardadoOk) {
                                     await AuthService()
                                         .enviarCodigoVerificacion(
@@ -444,7 +460,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(color: Colors.black54, fontSize: 14),
                   ),
                   const SizedBox(height: 20),
-                  // --- FILA DE REDES SOCIALES CON MÁS ESPACIO ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -452,17 +467,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'assets/images/facebook.png',
                         () => debugPrint("FB"),
                       ),
-                      const SizedBox(width: 25), // Aumentado de 15 a 25
+                      const SizedBox(width: 25),
                       _socialIcon(
                         'assets/images/correo.png',
                         () => debugPrint("Email"),
                       ),
-                      const SizedBox(width: 25), // Aumentado de 15 a 25
+                      const SizedBox(width: 25),
                       _socialIcon(
                         'assets/images/instagram.png',
                         () => debugPrint("IG"),
                       ),
-                      const SizedBox(width: 25), // Aumentado de 15 a 25
+                      const SizedBox(width: 25),
                       _socialIcon(
                         'assets/images/google.png',
                         () => debugPrint("Google"),
@@ -484,7 +499,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(10), // Un poco más de padding interno
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

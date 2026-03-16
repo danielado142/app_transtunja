@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+// --- IMPORTACIÓN DE TU CONFIGURACIÓN ---
+import 'package:app_transtunja/config/constants.dart';
+
 // --- CLIPPER PARA LA CURVA SUPERIOR ---
 class HeaderClipper extends CustomClipper<Path> {
   @override
@@ -40,7 +43,7 @@ class _RecuperacionPasswordScreenState
   final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
 
-  final String baseUrl = "http://192.168.0.103/TransTunja";
+  // --- ELIMINAMOS LA IP DE AQUÍ Y USAREMOS ApiConfig.baseUrl ---
 
   @override
   void dispose() {
@@ -57,7 +60,8 @@ class _RecuperacionPasswordScreenState
     }
     setState(() => _isLoading = true);
     try {
-      final url = Uri.parse('$baseUrl/recuperar_password.php');
+      // USAMOS ApiConfig.baseUrl
+      final url = Uri.parse('${ApiConfig.baseUrl}/recuperar_password.php');
       final response = await http.post(
         url,
         body: jsonEncode({'correo': email}),
@@ -88,7 +92,8 @@ class _RecuperacionPasswordScreenState
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('$baseUrl/verificar_codigo.php');
+      // USAMOS ApiConfig.baseUrl
+      final url = Uri.parse('${ApiConfig.baseUrl}/verificar_codigo.php');
       final response = await http.post(
         url,
         body: jsonEncode({'correo': email, 'token': token}),
@@ -99,7 +104,6 @@ class _RecuperacionPasswordScreenState
 
       if (data['valido'] == true) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        // NAVEGACIÓN A LA SIGUIENTE INTERFAZ PASANDO EL CORREO
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -260,10 +264,10 @@ class _RecuperacionPasswordScreenState
 }
 
 // ==========================================================
-// PANTALLA 2: RESTABLECER CONTRASEÑA (LA QUE PEDISTE)
+// PANTALLA 2: RESTABLECER CONTRASEÑA
 // ==========================================================
 class RestablecerPasswordScreen extends StatefulWidget {
-  final String correo; // Recibe el correo de la pantalla anterior
+  final String correo;
   const RestablecerPasswordScreen({super.key, required this.correo});
 
   @override
@@ -295,8 +299,9 @@ class _RestablecerPasswordScreenState extends State<RestablecerPasswordScreen> {
     setState(() => _isUpdating = true);
 
     try {
+      // USAMOS ApiConfig.baseUrl
       final response = await http.post(
-        Uri.parse("http://192.168.0.103/TransTunja/actualizar_password.php"),
+        Uri.parse("${ApiConfig.baseUrl}/actualizar_password.php"),
         body: jsonEncode({'correo': widget.correo, 'password': p1}),
         headers: {'Content-Type': 'application/json'},
       );
@@ -305,7 +310,7 @@ class _RestablecerPasswordScreenState extends State<RestablecerPasswordScreen> {
       if (data['actualizado'] == true) {
         _mostrarExito();
       } else {
-        _mostrarAlerta(data['mensaje']);
+        _mostrarAlerta(data['mensaje'] ?? "Error al actualizar");
       }
     } catch (e) {
       _mostrarAlerta("Error al conectar con el servidor");
