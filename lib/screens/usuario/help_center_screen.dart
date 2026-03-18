@@ -272,18 +272,18 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
               },
             ),
             _ActionCard(
-  icon: Icons.lightbulb_outline,
-  title: 'Enviar sugerencia',
-  subtitle: 'Ayúdanos a mejorar la app.',
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SendSuggestionScreen(),
-      ),
-    );
-  },
-),
+              icon: Icons.lightbulb_outline,
+              title: 'Enviar sugerencia',
+              subtitle: 'Ayúdanos a mejorar la app.',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SendSuggestionScreen(),
+                  ),
+                );
+              },
+            ),
 
             const SizedBox(height: 18),
 
@@ -443,3 +443,4 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
+
