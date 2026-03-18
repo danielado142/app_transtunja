@@ -53,54 +53,101 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final list = _filtered;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF6F6F7),
+      appBar: AppBar(
+        backgroundColor: red,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Notificaciones",
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            const SizedBox(height: 14),
-            const Text(
-              "Notificaciones",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
-                    BoxShadow(
-                      blurRadius: 10,
-                      color: Colors.black12,
-                      offset: Offset(0, 4),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Consulta avisos, alertas y novedades importantes.",
+                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: const [
+                        BoxShadow(
+                          blurRadius: 10,
+                          color: Colors.black12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications_none, color: red.withOpacity(0.9)),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        "Solo importantes",
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: red.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.notifications_none,
+                            color: red,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Solo importantes",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                "Muestra únicamente alertas prioritarias.",
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: _onlyImportant,
+                          activeColor: red,
+                          onChanged: (v) => setState(() => _onlyImportant = v),
+                        ),
+                      ],
                     ),
-                    Switch(
-                      value: _onlyImportant,
-                      activeColor: red,
-                      onChanged: (v) => setState(() => _onlyImportant = v),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    "Resultados: ${list.length}",
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
               ),
             ),
-
-            const SizedBox(height: 12),
-
             Expanded(
               child: list.isEmpty
                   ? const _EmptyState()
@@ -122,12 +169,12 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(
               Icons.notifications_off_outlined,
               size: 48,

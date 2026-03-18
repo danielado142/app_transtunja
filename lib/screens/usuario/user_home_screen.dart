@@ -35,7 +35,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     const redBar = Color(0xFFD10000);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TRANSTUNJA'), centerTitle: true),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

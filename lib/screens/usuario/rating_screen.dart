@@ -47,14 +47,10 @@ class _RatingScreenState extends State<RatingScreen> {
 
   String get _busId => _busIdCtrl.text.trim();
 
-  // ✅ Validador simple: permite "UT-123" o placa tipo "ABC123" / "ABC-123"
   bool get _busIdValid {
     final v = _busId.toUpperCase();
 
-    // UT-xxx
     final utOk = RegExp(r'^UT-\d{2,4}$').hasMatch(v);
-
-    // Placa simple: 3 letras + 3 números, con o sin guion
     final plateOk = RegExp(r'^[A-Z]{3}-?\d{3}$').hasMatch(v);
 
     return utOk || plateOk;
@@ -65,20 +61,28 @@ class _RatingScreenState extends State<RatingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF6F6F7),
+      appBar: AppBar(
+        backgroundColor: red,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Calificación",
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: [
-            const Center(
-              child: Text(
-                "Calificación",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
+            const Text(
+              "Evalúa tu experiencia y ayúdanos a mejorar el servicio.",
+              style: TextStyle(color: Colors.black54, fontSize: 13),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // ✅ Identificador del bus (obligatorio)
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +93,7 @@ class _RatingScreenState extends State<RatingScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    "Escribe la placa o el código (ej: UT-120).",
+                    "Escribe la placa o el código del vehículo (ej: UT-120).",
                     style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
@@ -147,7 +151,6 @@ class _RatingScreenState extends State<RatingScreen> {
 
             const SizedBox(height: 14),
 
-            // (Opcional) Ruta o contexto
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,7 +161,7 @@ class _RatingScreenState extends State<RatingScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    "Si la conoces, ayuda a dar contexto (no es obligatorio).",
+                    "Si conoces la ruta, puedes agregarla para dar más contexto.",
                     style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
@@ -178,7 +181,6 @@ class _RatingScreenState extends State<RatingScreen> {
 
             const SizedBox(height: 14),
 
-            // ⭐ Estrellas
             _Card(
               child: Column(
                 children: [
@@ -192,7 +194,6 @@ class _RatingScreenState extends State<RatingScreen> {
                     style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 14),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(5, (i) {
@@ -209,13 +210,11 @@ class _RatingScreenState extends State<RatingScreen> {
                       );
                     }),
                   ),
-
                   const SizedBox(height: 6),
-
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: 12,
+                      vertical: 7,
                     ),
                     decoration: BoxDecoration(
                       color: red.withOpacity(0.12),
@@ -234,7 +233,6 @@ class _RatingScreenState extends State<RatingScreen> {
 
             const SizedBox(height: 14),
 
-            // Tags
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +272,6 @@ class _RatingScreenState extends State<RatingScreen> {
 
             const SizedBox(height: 14),
 
-            // Comentario
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,15 +295,13 @@ class _RatingScreenState extends State<RatingScreen> {
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-            // Botón enviar
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _canSend
                     ? () {
-                        // Mock: aquí iría POST al backend
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -327,7 +322,7 @@ class _RatingScreenState extends State<RatingScreen> {
                   backgroundColor: red,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -339,7 +334,7 @@ class _RatingScreenState extends State<RatingScreen> {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const Text(
               "Nota: En esta versión la calificación se asocia por identificador del bus (UT- / placa).",
               style: TextStyle(color: Colors.black54),

@@ -59,18 +59,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ].join(' • ');
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF6F6F7),
+      appBar: AppBar(
+        backgroundColor: red,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Perfil',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: [
-            const Center(
-              child: Text(
-                'Perfil',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
+            const Text(
+              'Administra tu información personal y tus preferencias.',
+              style: TextStyle(color: Colors.black54, fontSize: 13),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             Container(
               padding: const EdgeInsets.all(20),

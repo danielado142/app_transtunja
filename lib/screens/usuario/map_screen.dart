@@ -60,7 +60,18 @@ class _MapScreenState extends State<MapScreen> {
     const routeName = 'Centro - UPTC';
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: red,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'TRANSTUNJA',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             FlutterMap(
