@@ -1,18 +1,11 @@
 import '../models/user_model.dart';
+import '../repositories/profile_repository.dart';
 
 class ProfileService {
-  static UserModel _currentUser = UserModel(
-    name: 'Usuario TransTunja',
-    email: 'usuario@email.com',
-    phone: '',
-    gender: 'Prefiero no decirlo',
-    notificationsEnabled: true,
-    darkMode: false,
-  );
+  final ProfileRepository _repository = ProfileRepository();
 
-  Future<UserModel> getUserProfile() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _currentUser;
+  Future<UserModel> getUserProfile() {
+    return _repository.getUserProfile();
   }
 
   Future<UserModel> updateUserProfile({
@@ -20,34 +13,26 @@ class ProfileService {
     required String email,
     required String phone,
     required String? gender,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    _currentUser = _currentUser.copyWith(
+  }) {
+    return _repository.updateUserProfile(
       name: name,
       email: email,
       phone: phone,
       gender: gender,
     );
-
-    return _currentUser;
   }
 
   Future<UserModel> updatePreferences({
     bool? notificationsEnabled,
     bool? darkMode,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 250));
-
-    _currentUser = _currentUser.copyWith(
+  }) {
+    return _repository.updatePreferences(
       notificationsEnabled: notificationsEnabled,
       darkMode: darkMode,
     );
-
-    return _currentUser;
   }
 
-  Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 250));
+  Future<void> logout() {
+    return _repository.logout();
   }
 }
