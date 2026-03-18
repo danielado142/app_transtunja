@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../models/route_model.dart';
+import '../../services/route_service.dart';
 import 'route_detail_screen.dart';
 
 class RoutesScreen extends StatefulWidget {
@@ -11,64 +14,8 @@ class RoutesScreen extends StatefulWidget {
 class _RoutesScreenState extends State<RoutesScreen> {
   static const red = Color(0xFFD10000);
 
-  final List<Map<String, String>> _routes = const [
-    {
-      "name": "Centro - UPTC",
-      "eta": "4 min",
-      "stop": "Plaza Real",
-      "tag": "UPTC",
-      "status": "Activa",
-      "extra": "6 paradas • Servicio activo",
-    },
-    {
-      "name": "Terminal - Centro",
-      "eta": "7 min",
-      "stop": "Parque Santander",
-      "tag": "Terminal",
-      "status": "Activa",
-      "extra": "5 paradas • Alta demanda",
-    },
-    {
-      "name": "Unicentro - Hospital",
-      "eta": "10 min",
-      "stop": "Avenida Norte",
-      "tag": "Unicentro",
-      "status": "Activa",
-      "extra": "8 paradas • Servicio activo",
-    },
-    {
-      "name": "Centro - Unicentro",
-      "eta": "6 min",
-      "stop": "Centro",
-      "tag": "Centro",
-      "status": "Activa",
-      "extra": "4 paradas • Servicio activo",
-    },
-    {
-      "name": "UPTC - Terminal",
-      "eta": "9 min",
-      "stop": "UPTC",
-      "tag": "UPTC",
-      "status": "Activa",
-      "extra": "7 paradas • Servicio activo",
-    },
-    {
-      "name": "Centro - Terminal",
-      "eta": "8 min",
-      "stop": "Plaza de Bolívar",
-      "tag": "Centro",
-      "status": "Activa",
-      "extra": "5 paradas • Servicio activo",
-    },
-    {
-      "name": "Unicentro - Centro",
-      "eta": "5 min",
-      "stop": "Unicentro",
-      "tag": "Unicentro",
-      "status": "Activa",
-      "extra": "4 paradas • Servicio activo",
-    },
-  ];
+  final RouteService _routeService = RouteService();
+  final TextEditingController _searchCtrl = TextEditingController();
 
   final List<String> _filters = const [
     "Todas",
@@ -78,9 +25,16 @@ class _RoutesScreenState extends State<RoutesScreen> {
     "Unicentro",
   ];
 
+  List<RouteModel> _routes = [];
+  bool _isLoading = true;
   String _selectedFilter = "Todas";
-  final TextEditingController _searchCtrl = TextEditingController();
   String _query = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoutes();
+  }
 
   @override
   void dispose() {
@@ -88,23 +42,48 @@ class _RoutesScreenState extends State<RoutesScreen> {
     super.dispose();
   }
 
-  List<Map<String, String>> get _filteredRoutes {
-    var list = _selectedFilter == "Todas"
+  Future<void> _loadRoutes() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final routes = await _routeService.getRoutes();
+
+      if (!mounted) return;
+
+      setState(() {
+        _routes = routes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar rutas: $e'),
+        ),
+      );
+    }
+  }
+
+  List<RouteModel> get _filteredRoutes {
+    final filteredByTag = _selectedFilter == "Todas"
         ? _routes
-        : _routes.where((r) => r["tag"] == _selectedFilter).toList();
+        : _routes.where((route) => route.tag == _selectedFilter).toList();
 
     final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return list;
+    if (q.isEmpty) return filteredByTag;
 
-    return list.where((r) {
-      final name = (r["name"] ?? "").toLowerCase();
-      final stop = (r["stop"] ?? "").toLowerCase();
-      final tag = (r["tag"] ?? "").toLowerCase();
-      final extra = (r["extra"] ?? "").toLowerCase();
-      return name.contains(q) ||
-          stop.contains(q) ||
-          tag.contains(q) ||
-          extra.contains(q);
+    return filteredByTag.where((route) {
+      return route.name.toLowerCase().contains(q) ||
+          route.stop.toLowerCase().contains(q) ||
+          route.tag.toLowerCase().contains(q) ||
+          route.extra.toLowerCase().contains(q);
     }).toList();
   }
 
@@ -126,133 +105,155 @@ class _RoutesScreenState extends State<RoutesScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: CustomScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Encuentra tu ruta y revisa sus detalles.",
-                      style: TextStyle(color: Colors.black54, fontSize: 13),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: const [
-                          BoxShadow(
-                            blurRadius: 10,
-                            color: Colors.black12,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) => setState(() => _query = v),
-                        decoration: InputDecoration(
-                          hintText: "Buscar ruta o parada...",
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _query.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () {
-                                    _searchCtrl.clear();
-                                    setState(() => _query = "");
-                                  },
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : RefreshIndicator(
+                onRefresh: _loadRoutes,
+                child: CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Encuentra tu ruta y revisa sus detalles.",
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    blurRadius: 10,
+                                    color: Colors.black12,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchCtrl,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _query = value;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  hintText: "Buscar ruta o parada...",
+                                  prefixIcon: const Icon(Icons.search),
+                                  suffixIcon: _query.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          icon: const Icon(Icons.close),
+                                          onPressed: () {
+                                            _searchCtrl.clear();
+                                            setState(() {
+                                              _query = "";
+                                            });
+                                          },
+                                        ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                 ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 54,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  scrollDirection: Axis.horizontal,
-                  itemBuilder: (context, i) {
-                    final f = _filters[i];
-                    final selected = f == _selectedFilter;
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 54,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          scrollDirection: Axis.horizontal,
+                          itemBuilder: (context, index) {
+                            final filter = _filters[index];
+                            final selected = filter == _selectedFilter;
 
-                    return Center(
-                      child: ChoiceChip(
-                        label: Text(
-                          f,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: selected ? red : Colors.black87,
+                            return Center(
+                              child: ChoiceChip(
+                                label: Text(
+                                  filter,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: selected ? red : Colors.black87,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                selected: selected,
+                                onSelected: (_) {
+                                  setState(() {
+                                    _selectedFilter = filter;
+                                  });
+                                },
+                                selectedColor: red.withOpacity(0.12),
+                                backgroundColor: Colors.white,
+                                shape: StadiumBorder(
+                                  side: BorderSide(
+                                    color: selected ? red : Colors.black26,
+                                  ),
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                showCheckmark: true,
+                                checkmarkColor: red,
+                              ),
+                            );
+                          },
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemCount: _filters.length,
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                        child: Text(
+                          "Resultados: ${filtered.length}",
+                          style: const TextStyle(
+                            color: Colors.black54,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        selected: selected,
-                        onSelected: (_) => setState(() => _selectedFilter = f),
-                        selectedColor: red.withOpacity(0.12),
-                        backgroundColor: Colors.white,
-                        shape: StadiumBorder(
-                          side: BorderSide(
-                            color: selected ? red : Colors.black26,
+                      ),
+                    ),
+                    if (filtered.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyRoutesState(),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final route = filtered[index];
+
+                              return _RouteCard(
+                                route: route,
+                              );
+                            },
+                            childCount: filtered.length,
                           ),
                         ),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        showCheckmark: true,
-                        checkmarkColor: red,
                       ),
-                    );
-                  },
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemCount: _filters.length,
+                  ],
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                child: Text(
-                  "Resultados: ${filtered.length}",
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            if (filtered.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyRoutesState(),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final route = filtered[index];
-                    return _RouteCard(
-                      routeName: route["name"]!,
-                      eta: route["eta"]!,
-                      stopName: route["stop"]!,
-                      status: route["status"] ?? "Activa",
-                      extra: route["extra"] ?? "",
-                    );
-                  }, childCount: filtered.length),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -261,24 +262,16 @@ class _RoutesScreenState extends State<RoutesScreen> {
 class _RouteCard extends StatelessWidget {
   static const red = Color(0xFFD10000);
 
-  final String routeName;
-  final String eta;
-  final String stopName;
-  final String status;
-  final String extra;
+  final RouteModel route;
 
   const _RouteCard({
-    required this.routeName,
-    required this.eta,
-    required this.stopName,
-    required this.status,
-    required this.extra,
+    required this.route,
   });
 
   @override
   Widget build(BuildContext context) {
-    final parts = routeName.split(' - ');
-    final origin = parts.isNotEmpty ? parts.first : routeName;
+    final parts = route.name.split(' - ');
+    final origin = parts.isNotEmpty ? parts.first : route.name;
     final destination = parts.length > 1 ? parts.last : '';
 
     return Container(
@@ -315,7 +308,7 @@ class _RouteCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      routeName,
+                      route.name,
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
@@ -323,7 +316,9 @@ class _RouteCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      destination.isEmpty ? origin : '$origin  →  $destination',
+                      destination.isEmpty
+                          ? origin
+                          : '$origin  →  $destination',
                       style: const TextStyle(
                         color: Colors.black54,
                         fontWeight: FontWeight.w600,
@@ -343,7 +338,7 @@ class _RouteCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  eta,
+                  route.eta,
                   style: const TextStyle(
                     color: red,
                     fontWeight: FontWeight.w900,
@@ -359,13 +354,13 @@ class _RouteCard extends StatelessWidget {
             children: [
               _MiniBadge(
                 icon: Icons.check_circle_outline,
-                text: status,
+                text: route.status,
                 color: red,
               ),
-              if (extra.isNotEmpty)
+              if (route.extra.isNotEmpty)
                 _MiniBadge(
                   icon: Icons.info_outline,
-                  text: extra,
+                  text: route.extra,
                   color: Colors.black87,
                   light: true,
                 ),
@@ -373,7 +368,7 @@ class _RouteCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "Próxima parada: $stopName",
+            "Próxima parada: ${route.stop}",
             style: const TextStyle(color: Colors.black54, fontSize: 14),
           ),
           const SizedBox(height: 14),
@@ -385,9 +380,9 @@ class _RouteCard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => RouteDetailScreen(
-                      routeName: routeName,
-                      stopName: stopName,
-                      etaText: eta,
+                      routeName: route.name,
+                      stopName: route.stop,
+                      etaText: route.eta,
                     ),
                   ),
                 );
