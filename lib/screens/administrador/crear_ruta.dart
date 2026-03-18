@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/ruta_service.dart';
 import 'mapa_admin.dart';
-import 'admin_dashboard.dart';
+import 'admin_dashboard.dart'; // ← FALTABA ESTE IMPORT
 
 class CrearRuta extends StatefulWidget {
   const CrearRuta({super.key});
@@ -25,10 +25,8 @@ class _CrearRutaState extends State<CrearRuta> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(10),
-
         child: Column(
           children: [
             const Text(
@@ -65,13 +63,21 @@ class _CrearRutaState extends State<CrearRuta> {
             SizedBox(
               width: double.infinity,
               height: 50,
-
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
 
                 onPressed: () async {
-                  String nombre = nombreCtrl.text;
-                  String destino = destinoCtrl.text;
+                  String nombre = nombreCtrl.text.trim();
+                  String destino = destinoCtrl.text.trim();
+
+                  if (nombre.isEmpty || destino.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Completa todos los campos"),
+                      ),
+                    );
+                    return;
+                  }
 
                   String idRuta =
                       "R-" + DateTime.now().millisecondsSinceEpoch.toString();
@@ -86,15 +92,18 @@ class _CrearRutaState extends State<CrearRuta> {
                   );
 
                   if (resultado["success"] == true) {
+                    if (!mounted) return;
+
                     await showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Se ha guardado exitosamente'),
+                          title: const Text('Ruta guardada exitosamente'),
                           actions: [
                             TextButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
+
                                 Navigator.of(context).pushAndRemoveUntil(
                                   MaterialPageRoute(
                                     builder: (_) => const AdminDashboard(),
@@ -110,7 +119,7 @@ class _CrearRutaState extends State<CrearRuta> {
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Error al guardar ruta")),
+                      const SnackBar(content: Text("Error al guardar la ruta")),
                     );
                   }
                 },

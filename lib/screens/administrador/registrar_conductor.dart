@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/admin_service.dart'; // Asegúrate de ajustar esta ruta
+import 'package:app_transtunja/services/admin_service.dart'; // Corregido: ruta correcta al servicio
 
 class RegistrarConductor extends StatefulWidget {
   const RegistrarConductor({super.key});
@@ -45,15 +45,17 @@ class _RegistrarConductorState extends State<RegistrarConductor> {
               controller: _arlCtrl,
               decoration: const InputDecoration(labelText: 'ARL'),
             ),
-            DropdownButtonFormField(
+            DropdownButtonFormField<String>(
               value: _sangreSeleccionada,
-              items: [
+              items: const [
                 'O',
                 'A',
                 'B',
                 'AB',
-              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (val) => setState(() => _sangreSeleccionada = val!),
+              ].map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: (String? val) =>
+                  setState(() => _sangreSeleccionada = val ?? _sangreSeleccionada),
               decoration: const InputDecoration(labelText: 'Grupo Sanguíneo'),
             ),
             const SizedBox(height: 20),

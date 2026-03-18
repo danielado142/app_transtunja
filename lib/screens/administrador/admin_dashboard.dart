@@ -11,6 +11,7 @@ class AdminDashboard extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red,
+        automaticallyImplyLeading: false,
         title: const Text(
           'PANEL ADMINISTRATIVO',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),

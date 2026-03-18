@@ -1,3 +1,4 @@
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,8 +29,9 @@ class _MapaAdminState extends State<MapaAdmin> {
 
       children: [
         TileLayer(
-          urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          userAgentPackageName: "com.example.app",
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.example.transtunja',
+          // AQUÍ ES DONDE DEBES AGREGAR LA LÍNEA DE OPTIMIZACIÓN
         ),
 
         MarkerLayer(
