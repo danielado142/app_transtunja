@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'accessibility_screen.dart';
 import 'report_problem_screen.dart';
+import 'send_suggestion_screen.dart';
 
 class HelpCenterScreen extends StatefulWidget {
   const HelpCenterScreen({super.key});
@@ -271,12 +272,18 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
               },
             ),
             _ActionCard(
-              icon: Icons.lightbulb_outline,
-              title: 'Enviar sugerencia',
-              subtitle: 'Ayúdanos a mejorar la app.',
-              onTap: () =>
-                  _showMockMessage('Formulario de sugerencias próximamente'),
-            ),
+  icon: Icons.lightbulb_outline,
+  title: 'Enviar sugerencia',
+  subtitle: 'Ayúdanos a mejorar la app.',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SendSuggestionScreen(),
+      ),
+    );
+  },
+),
 
             const SizedBox(height: 18),
 
