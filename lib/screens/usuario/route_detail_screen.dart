@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../models/route_detail_model.dart';
+import '../../models/route_stop_model.dart';
+
 class RouteDetailScreen extends StatelessWidget {
   final String routeName;
   final String stopName;
@@ -16,24 +19,11 @@ class RouteDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     const red = Color(0xFFD10000);
 
-    final stops = <_Stop>[
-      const _Stop(
-        name: "Centro",
-        info: "Punto de inicio",
-        state: _StopState.start,
-      ),
-      _Stop(name: stopName, info: "Parada cercana", state: _StopState.current),
-      const _Stop(
-        name: "Parque Santander",
-        info: "Intermedia",
-        state: _StopState.middle,
-      ),
-      const _Stop(name: "UPTC", info: "Destino final", state: _StopState.end),
-    ];
-
-    final routeParts = routeName.split(' - ');
-    final origin = routeParts.isNotEmpty ? routeParts.first : routeName;
-    final destination = routeParts.length > 1 ? routeParts.last : '';
+    final detail = RouteDetailModel.fromBasicData(
+      routeName: routeName,
+      stopName: stopName,
+      etaText: etaText,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F7),
@@ -80,7 +70,7 @@ class RouteDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            routeName,
+                            detail.routeName,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
@@ -88,9 +78,9 @@ class RouteDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            destination.isEmpty
-                                ? origin
-                                : '$origin  →  $destination',
+                            detail.destination.isEmpty
+                                ? detail.origin
+                                : '${detail.origin}  →  ${detail.destination}',
                             style: const TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.w600,
@@ -104,18 +94,19 @@ class RouteDetailScreen extends StatelessWidget {
                             children: [
                               _InfoPill(
                                 icon: Icons.schedule,
-                                text: 'Próximo bus: $etaText',
+                                text: 'Próximo bus: ${detail.etaText}',
                                 color: red,
                               ),
                               _InfoPill(
                                 icon: Icons.place_outlined,
-                                text: 'Parada actual: $stopName',
+                                text: 'Parada actual: ${detail.stopName}',
                                 color: Colors.black87,
                                 light: true,
                               ),
                               _InfoPill(
                                 icon: Icons.alt_route,
-                                text: '${stops.length} puntos en la ruta',
+                                text:
+                                    '${detail.stops.length} puntos en la ruta',
                                 color: Colors.black87,
                                 light: true,
                               ),
@@ -163,14 +154,14 @@ class RouteDetailScreen extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: stops.length,
+                itemCount: detail.stops.length,
                 itemBuilder: (context, index) {
-                  final s = stops[index];
+                  final stop = detail.stops[index];
                   final isFirst = index == 0;
-                  final isLast = index == stops.length - 1;
+                  final isLast = index == detail.stops.length - 1;
 
                   return _TimelineTile(
-                    stop: s,
+                    stop: stop,
                     red: red,
                     isFirst: isFirst,
                     isLast: isLast,
@@ -258,20 +249,8 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-/* -------------------- Timeline UI -------------------- */
-
-enum _StopState { start, current, middle, end }
-
-class _Stop {
-  final String name;
-  final String info;
-  final _StopState state;
-
-  const _Stop({required this.name, required this.info, required this.state});
-}
-
 class _TimelineTile extends StatelessWidget {
-  final _Stop stop;
+  final RouteStopModel stop;
   final Color red;
   final bool isFirst;
   final bool isLast;
@@ -285,9 +264,9 @@ class _TimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCurrent = stop.state == _StopState.current;
-    final isStart = stop.state == _StopState.start;
-    final isEnd = stop.state == _StopState.end;
+    final isCurrent = stop.state == RouteStopState.current;
+    final isStart = stop.state == RouteStopState.start;
+    final isEnd = stop.state == RouteStopState.end;
 
     final dotColor = isCurrent ? red : Colors.black26;
     final titleWeight = isCurrent ? FontWeight.w900 : FontWeight.w700;
