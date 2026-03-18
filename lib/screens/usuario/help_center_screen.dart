@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'accessibility_screen.dart';
 import 'report_problem_screen.dart';
 import 'send_suggestion_screen.dart';
+import 'contact_support_screen.dart';
 
 class HelpCenterScreen extends StatefulWidget {
   const HelpCenterScreen({super.key});
@@ -331,8 +332,14 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () =>
-                          _showMockMessage('Canal de soporte próximamente'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ContactSupportScreen(),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.support_agent),
                       label: const Text('Contactar soporte'),
                       style: ElevatedButton.styleFrom(
@@ -443,4 +450,3 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
-
