@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+// Asegúrate de que esta ruta sea la correcta según tu carpeta:
+import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({super.key});
 
   @override
   State<DriverVerificationScreen> createState() =>
-      _DriverVerificationScreenState();
+      _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7();
 }
 
-class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
+class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
+    extends State<DriverVerificationScreen> {
   final String _codigoCorrecto = "654321";
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   final List<TextEditingController> _controllers = List.generate(
@@ -39,19 +42,17 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     }
   }
 
-  // --- ALERTA REDISEÑADA ESTILO ADMINISTRADOR ---
   void _mostrarExito() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFDF2F2), // Fondo sutil
+        backgroundColor: const Color(0xFFFDF2F2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Ícono de auto en verde para indicar éxito
             const Icon(Icons.directions_car, color: Colors.green, size: 80),
             const SizedBox(height: 25),
             const Text(
@@ -75,12 +76,26 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
         actions: [
           Center(
             child: TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                // 1. Cerramos el diálogo primero
+                Navigator.pop(context);
+
+                // 2. Saltamos a la pantalla del Home de Conductor
+                // Usamos pushAndRemoveUntil para que no pueda volver atrás a la verificación
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const HomeConductor(nombreConductor: "Conductor"),
+                  ),
+                  (route) => false,
+                );
+              },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B), // Rojo oscuro para el botón
+                  color: Color(0xFFC0392B),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -130,9 +145,7 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
               ElevatedButton(
                 onPressed: _validarCodigo,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFF2ECC71,
-                  ), // Color verde conductor
+                  backgroundColor: const Color(0xFF2ECC71),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 100,
                     vertical: 15,

@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-// Imports de tus pantallas
+// --- TUS IMPORTS ---
 import 'pantalla_bienvenida.dart';
 import 'package:app_transtunja/screens/usuario/login_screen.dart';
 import 'package:app_transtunja/screens/usuario/register_screen.dart';
 import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
-// Asegúrate de que este archivo contenga la clase SmsVerificationScreen
 import 'package:app_transtunja/screens/usuario/verification_screen.dart';
+
+// --- IMPORTS DE TU COMPAÑERA ---
+import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
-    debugPrint("✅ Firebase conectado con éxito");
+    debugPrint("✅ Firebase conectado");
   } catch (e) {
-    debugPrint("❌ Error conectando Firebase: $e");
+    debugPrint("❌ Error Firebase: $e");
   }
   runApp(const MyApp());
 }
@@ -34,37 +36,40 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
+      supportedLocales: const [Locale('es', 'ES')],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
       home: const PantallaBienvenida(),
       onGenerateRoute: (settings) {
-        // Ruta para Selección de Rol
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+
         if (settings.name == '/role_selection') {
-          final args = settings.arguments as Map<String, dynamic>? ?? {};
           return MaterialPageRoute(
-            builder: (context) => RoleSelectionScreen(userData: args),
+            builder: (_) => RoleSelectionScreen(userData: args),
           );
         }
-
-        // CORRECCIÓN AQUÍ: Cambiamos VerificationScreen por SmsVerificationScreen
         if (settings.name == '/verification') {
-          final args = settings.arguments as Map<String, dynamic>? ?? {};
           return MaterialPageRoute(
-            builder: (context) => SmsVerificationScreen(
-              // <--- NOMBRE ACTUALIZADO
+            builder: (_) => SmsVerificationScreen(
               verificationId: args['verificationId'] ?? '',
               userData: args['userData'] ?? {},
             ),
           );
         }
+        if (settings.name == '/home_conductor') {
+          return MaterialPageRoute(
+            builder: (_) =>
+                HomeConductor(nombreConductor: args['nombre'] ?? "Conductor"),
+          );
+        }
+        if (settings.name == '/login')
+          return MaterialPageRoute(builder: (_) => const LoginScreen());
+        if (settings.name == '/register')
+          return MaterialPageRoute(builder: (_) => const RegisterScreen());
+
         return null;
-      },
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
       },
     );
   }
