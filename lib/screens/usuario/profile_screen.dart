@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'help_center_screen.dart';
 import 'accessibility_screen.dart';
 import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -204,8 +205,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Función futura')),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen(),
+                      ),
                     );
                   },
                 ),
