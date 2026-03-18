@@ -1,15 +1,14 @@
 import '../models/rating_model.dart';
+import '../repositories/rating_repository.dart';
 
 class RatingService {
-  static final List<RatingModel> _ratings = [];
+  final RatingRepository _repository = RatingRepository();
 
-  Future<void> submitRating(RatingModel rating) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _ratings.add(rating);
+  Future<void> submitRating(RatingModel rating) {
+    return _repository.submitRating(rating);
   }
 
-  Future<List<RatingModel>> getRatings() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return List.from(_ratings);
+  Future<List<RatingModel>> getRatings() {
+    return _repository.getRatings();
   }
 }
