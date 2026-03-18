@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../models/user_model.dart';
+import '../../services/profile_service.dart';
 import 'help_center_screen.dart';
 import 'accessibility_screen.dart';
 import 'edit_profile_screen.dart';
@@ -15,47 +17,242 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const red = Color(0xFFD10000);
 
-  bool _notificationsEnabled = true;
-  bool _darkMode = false;
+  final ProfileService _profileService = ProfileService();
 
-  String _name = 'Usuario TransTunja';
-  String _email = 'usuario@email.com';
-  String _phone = '';
-  String? _gender = 'Prefiero no decirlo';
+  UserModel? _user;
+  bool _isLoading = true;
+  bool _isUpdatingPreferences = false;
+  bool _isLoggingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await _profileService.getUserProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        _user = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cargar perfil: $e')));
+    }
+  }
 
   Future<void> _openEditProfile() async {
+    if (_user == null) return;
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EditProfileScreen(
-          initialName: _name,
-          initialEmail: _email,
-          initialPhone: _phone,
-          initialGender: _gender,
+          initialName: _user!.name,
+          initialEmail: _user!.email,
+          initialPhone: _user!.phone,
+          initialGender: _user!.gender,
         ),
       ),
     );
 
     if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        _name = result['name'] as String? ?? _name;
-        _email = result['email'] as String? ?? _email;
-        _phone = result['phone'] as String? ?? _phone;
-        _gender = result['gender'] as String? ?? _gender;
-      });
+      try {
+        final updatedUser = await _profileService.updateUserProfile(
+          name: result['name'] as String? ?? _user!.name,
+          email: result['email'] as String? ?? _user!.email,
+          phone: result['phone'] as String? ?? _user!.phone,
+          gender: result['gender'] as String? ?? _user!.gender,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _user = updatedUser;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Perfil actualizado correctamente')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al actualizar perfil: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateNotifications(bool value) async {
+    if (_user == null || _isUpdatingPreferences) return;
+
+    setState(() {
+      _isUpdatingPreferences = true;
+    });
+
+    try {
+      final updatedUser = await _profileService.updatePreferences(
+        notificationsEnabled: value,
+      );
 
       if (!mounted) return;
+
+      setState(() {
+        _user = updatedUser;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil actualizado correctamente')),
+        SnackBar(content: Text('Error al actualizar preferencias: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingPreferences = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateDarkMode(bool value) async {
+    if (_user == null || _isUpdatingPreferences) return;
+
+    setState(() {
+      _isUpdatingPreferences = true;
+    });
+
+    try {
+      final updatedUser = await _profileService.updatePreferences(
+        darkMode: value,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _user = updatedUser;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al actualizar preferencias: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingPreferences = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    if (_isLoggingOut) return;
+
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    try {
+      await _profileService.logout();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cerrar sesión (mock)')));
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cerrar sesión: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingOut = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = _user;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F6F7),
+        appBar: AppBar(
+          backgroundColor: red,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            'Perfil',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F6F7),
+        appBar: AppBar(
+          backgroundColor: red,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            'Perfil',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'No se pudo cargar la información del perfil.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _loadProfile,
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final subtitleExtra = [
-      if (_phone.trim().isNotEmpty) _phone,
-      if (_gender != null && _gender!.trim().isNotEmpty) _gender!,
+      if (user.phone.trim().isNotEmpty) user.phone,
+      if (user.gender != null && user.gender!.trim().isNotEmpty) user.gender!,
     ].join(' • ');
 
     return Scaffold(
@@ -72,240 +269,250 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          children: [
-            const Text(
-              'Administra tu información personal y tus preferencias.',
-              style: TextStyle(color: Colors.black54, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 10,
-                    color: Colors.black12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
+        child: RefreshIndicator(
+          onRefresh: _loadProfile,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            children: [
+              const Text(
+                'Administra tu información personal y tus preferencias.',
+                style: TextStyle(color: Colors.black54, fontSize: 13),
               ),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 45,
-                        backgroundColor: red.withOpacity(0.15),
-                        child: const Icon(Icons.person, size: 50, color: red),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            onPressed: _openEditProfile,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(_email, style: const TextStyle(color: Colors.black54)),
-                  if (subtitleExtra.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitleExtra,
-                      style: const TextStyle(color: Colors.black45),
-                      textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [
+                    BoxShadow(
+                      blurRadius: 10,
+                      color: Colors.black12,
+                      offset: Offset(0, 4),
                     ),
                   ],
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _openEditProfile,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Editar perfil'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: red,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 45,
+                          backgroundColor: red.withOpacity(0.15),
+                          child: const Icon(Icons.person, size: 50, color: red),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              onPressed: _openEditProfile,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      user.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                    if (subtitleExtra.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitleExtra,
+                        style: const TextStyle(color: Colors.black45),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _openEditProfile,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar perfil'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: red,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              _SectionCard(
+                title: 'Preferencias',
+                children: [
+                  SwitchListTile(
+                    value: user.notificationsEnabled,
+                    activeColor: red,
+                    onChanged: _isUpdatingPreferences
+                        ? null
+                        : _updateNotifications,
+                    title: const Text(
+                      'Recibir notificaciones',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    secondary: const Icon(Icons.notifications_none),
+                  ),
+                  SwitchListTile(
+                    value: user.darkMode,
+                    activeColor: red,
+                    onChanged: _isUpdatingPreferences ? null : _updateDarkMode,
+                    title: const Text(
+                      'Modo oscuro (mock)',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    secondary: const Icon(Icons.dark_mode_outlined),
                   ),
                 ],
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            _SectionCard(
-              title: 'Preferencias',
-              children: [
-                SwitchListTile(
-                  value: _notificationsEnabled,
-                  activeColor: red,
-                  onChanged: (v) => setState(() => _notificationsEnabled = v),
-                  title: const Text(
-                    'Recibir notificaciones',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+              _SectionCard(
+                title: 'Cuenta',
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text(
+                      'Editar datos personales',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _openEditProfile,
                   ),
-                  secondary: const Icon(Icons.notifications_none),
-                ),
-                SwitchListTile(
-                  value: _darkMode,
-                  activeColor: red,
-                  onChanged: (v) => setState(() => _darkMode = v),
-                  title: const Text(
-                    'Modo oscuro (mock)',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: const Text(
+                      'Cambiar contraseña',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangePasswordScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  secondary: const Icon(Icons.dark_mode_outlined),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            _SectionCard(
-              title: 'Cuenta',
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: const Text(
-                    'Editar datos personales',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text(
+                      'Política de privacidad',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Función futura')),
+                      );
+                    },
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openEditProfile,
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text(
-                    'Cambiar contraseña',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ChangePasswordScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: const Text(
-                    'Política de privacidad',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Función futura')),
-                    );
-                  },
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            _SectionCard(
-              title: 'Soporte e inclusión',
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.help_outline),
-                  title: const Text(
-                    'Centro de ayuda',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+              _SectionCard(
+                title: 'Soporte e inclusión',
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text(
+                      'Centro de ayuda',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HelpCenterScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const HelpCenterScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.accessibility_new),
-                  title: const Text(
-                    'Accesibilidad',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.accessibility_new),
+                    title: const Text(
+                      'Accesibilidad',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AccessibilityScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AccessibilityScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cerrar sesión (mock)')),
-                  );
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text(
-                  'Cerrar sesión',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: red,
-                  side: const BorderSide(color: red),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoggingOut ? null : _logout,
+                  icon: _isLoggingOut
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.logout),
+                  label: const Text(
+                    'Cerrar sesión',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: red,
+                    side: const BorderSide(color: red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
