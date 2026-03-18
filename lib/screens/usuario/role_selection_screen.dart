@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+// Asegúrate de que estas rutas sean correctas en tu proyecto
 import '../administrador/admin_verification_screen.dart';
 import '../conductor/verificacion_conductor.dart';
 
@@ -22,53 +22,47 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // --- NUEVA ALERTA PARA EL ROL DE USUARIO ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(
-          0xFFFDF2F2,
-        ), // Fondo sutil igual que los otros
+        backgroundColor: const Color(0xFFFDF2F2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 10),
-            // Ícono de persona para el Usuario
-            const Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
-            const SizedBox(height: 25),
-            const Text(
+            SizedBox(height: 10),
+            Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
+            SizedBox(height: 25),
+            Text(
               '¡Acceso Confirmado!',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               'Has ingresado como Pasajero.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 17, color: Colors.black54),
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: 15),
           ],
         ),
         actions: [
           Center(
             child: TextButton(
               onPressed: () {
-                Navigator.pop(context); // Cierra la alerta
+                Navigator.pop(context);
+                // Si aún no tienes definida la ruta '/mapa_pasajero' en main.dart,
+                // esto dará error. Asegúrate de que exista.
                 Navigator.pushReplacementNamed(context, '/mapa_pasajero');
               },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B), // Rojo oscuro coherente
+                  color: Color(0xFFC0392B),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -81,6 +75,9 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Usamos 'nombreUsuario' porque así lo enviaremos desde el AuthService
+    final String nombre = userData['nombreUsuario'] ?? 'Usuario';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -98,7 +95,7 @@ class RoleSelectionScreen extends StatelessWidget {
               child: SafeArea(
                 child: Center(
                   child: Text(
-                    '¿Qué rol tendrás hoy,\n${userData['nombreUsuario'] ?? 'Usuario'}?',
+                    '¿Qué rol tendrás hoy,\n$nombre?',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -131,8 +128,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
-                    onTap: () =>
-                        _showUserAlert(context), // <--- Funcionalidad añadida
+                    onTap: () => _showUserAlert(context),
                   ),
                 ],
               ),

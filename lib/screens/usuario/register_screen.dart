@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-// Importamos la configuración centralizada
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// ✅ Importamos la configuración y servicios
 import 'package:app_transtunja/config/constants.dart';
-import '../../services/auth_service.dart';
-import 'verification_screen.dart';
+import 'package:app_transtunja/services/auth_service.dart';
+import 'package:app_transtunja/screens/usuario/verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -18,6 +20,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Controladores
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _nombresController = TextEditingController();
@@ -35,36 +38,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _aceptaTerminos = false;
   bool _isLoading = false;
 
-  // --- FUNCIÓN CORREGIDA PARA USAR LA IP DE CONSTANTS.DART ---
+  // --- FUNCIÓN PARA ENVIAR A MYSQL (XAMPP) ---
   Future<bool> _enviarDatosDirecto(Map<String, dynamic> datos) async {
-    // Ya no escribimos la IP aquí, la traemos de ApiConfig
     final String urlApi = '${ApiConfig.baseUrl}/registro.php';
 
     try {
-      final response = await http.post(
-        Uri.parse(urlApi),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(datos),
-      );
-
-      // Log para depuración en consola
-      debugPrint("Intentando conectar a: $urlApi");
+      final response = await http
+          .post(
+            Uri.parse(urlApi),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(datos),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final respuestaJson = json.decode(response.body);
-        if (respuestaJson['status'] == 'success') {
-          debugPrint("✅ Guardado en MySQL con éxito");
-          return true;
-        } else {
-          debugPrint("❌ Error MySQL: ${respuestaJson['message']}");
-          return false;
-        }
-      } else {
-        debugPrint("❌ Error de Servidor: Código ${response.statusCode}");
-        return false;
+        return respuestaJson['status'] == 'success';
       }
+      return false;
     } catch (e) {
-      debugPrint("❌ Error de red (Verifica tu IP en XAMPP): $e");
+      debugPrint("❌ Error de red XAMPP: $e");
       return false;
     }
   }
@@ -72,65 +65,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _mostrarTerminos() {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Términos y Condiciones",
+          style: TextStyle(color: Colors.red),
+        ),
+        content: const Text(
+          "1. Información real.\n2. Protección de datos.\n3. Uso personal.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Entendido"),
           ),
-          title: const Text(
-            "Términos y Condiciones",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-          ),
-          content: const SingleChildScrollView(
-            child: Text(
-              "Aquí van tus términos y condiciones legales para TRANSTUNJA...\n\n"
-              "1. El usuario se compromete a dar información real.\n"
-              "2. Los datos serán tratados según la ley de protección de datos.\n"
-              "3. El uso de la app es personal e intransferible.",
-              style: TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Entendido",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
   String? _validarPassword(String? value) {
-    if (value == null || value.isEmpty) return 'La contraseña es obligatoria';
+    if (value == null || value.isEmpty) return 'Requerido';
     if (value.length < 8) return 'Mínimo 8 caracteres';
-    bool hasUppercase = value.contains(RegExp(r'[A-Z]'));
-    bool hasSpecialCharacters = value.contains(
-      RegExp(r'[!@#$%^&*(),.?":{}|<>]'),
-    );
-    if (!hasUppercase) return 'Debe tener al menos una mayúscula';
-    if (!hasSpecialCharacters) return 'Debe tener un carácter especial';
+    if (!value.contains(RegExp(r'[A-Z]'))) return 'Falta una mayúscula';
+    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+      return 'Falta carácter especial';
     return null;
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _emailController.dispose();
-    _nombresController.dispose();
-    _apellidosController.dispose();
-    _dateController.dispose();
-    _documentoController.dispose();
-    _telefonoController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 
   Future<void> _selectDate() async {
@@ -149,12 +109,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _nombresController.dispose();
+    _apellidosController.dispose();
+    _dateController.dispose();
+    _documentoController.dispose();
+    _telefonoController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1E6E6),
       body: SingleChildScrollView(
         child: Stack(
           children: [
+            // Fondo Imagen
             Container(
               height: 350,
               decoration: const BoxDecoration(
@@ -164,40 +139,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
+            // Botón Atrás
             Positioned(
-              top: 25,
-              left: 5,
-              child: SafeArea(
+              top: 40,
+              left: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black26,
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 60),
+              padding: const EdgeInsets.only(top: 100),
               child: Column(
                 children: [
                   const Text(
-                    "Crea tu cuenta en segundos",
+                    "Crea tu cuenta",
                     style: TextStyle(
                       color: Colors.white,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 10,
-                          color: Colors.black,
-                          offset: Offset(2, 2),
-                        ),
-                      ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 20),
+                  // Formulario
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 25),
                     child: Container(
@@ -205,13 +172,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(35),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
                       ),
                       child: Form(
                         key: _formKey,
@@ -220,7 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             TextFormField(
                               controller: _usernameController,
                               decoration: const InputDecoration(
-                                labelText: "Nombre de usuario",
+                                labelText: "Usuario",
                               ),
                             ),
                             TextFormField(
@@ -261,21 +221,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               readOnly: true,
                               onTap: _selectDate,
                               decoration: const InputDecoration(
-                                labelText: "Fecha de nacimiento",
+                                labelText: "Nacimiento",
                                 suffixIcon: Icon(Icons.calendar_today),
                               ),
                             ),
                             TextFormField(
                               controller: _emailController,
                               decoration: const InputDecoration(
-                                labelText: "Correo Electrónico",
+                                labelText: "Email",
                               ),
                               keyboardType: TextInputType.emailAddress,
                             ),
                             TextFormField(
                               controller: _telefonoController,
                               decoration: const InputDecoration(
-                                labelText: "Número de Télefono",
+                                labelText: "Teléfono",
                               ),
                               keyboardType: TextInputType.phone,
                             ),
@@ -285,8 +245,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: _validarPassword,
                               decoration: InputDecoration(
                                 labelText: "Contraseña",
-                                helperText:
-                                    "Mín. 8 caracteres, mayúscula y especial",
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -299,31 +257,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ),
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              obscureText: _obscureConfirmPassword,
-                              validator: (v) => v != _passwordController.text
-                                  ? "Las contraseñas no coinciden"
-                                  : null,
-                              decoration: InputDecoration(
-                                labelText: "Confirmar contraseña",
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureConfirmPassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ),
-                                  onPressed: () => setState(
-                                    () => _obscureConfirmPassword =
-                                        !_obscureConfirmPassword,
-                                  ),
-                                ),
-                              ),
-                            ),
                             DropdownButtonFormField<String>(
                               value: _selectedRol,
-                              hint: const Text('Selecciona tu rol'),
-                              items: ['pasajero', 'conductor', 'administrador']
+                              hint: const Text('Selecciona rol'),
+                              items: ['pasajero', 'conductor']
                                   .map(
                                     (l) => DropdownMenuItem(
                                       value: l,
@@ -339,148 +276,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 15),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: CheckboxListTile(
-                      activeColor: Colors.red,
-                      title: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          const Text(
-                            "Acepto los ",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _mostrarTerminos,
-                            child: const Text(
-                              "Términos y Condiciones",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.redAccent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      value: _aceptaTerminos,
-                      onChanged: (v) => setState(() => _aceptaTerminos = v!),
-                      controlAffinity: ListTileControlAffinity.leading,
+                  const SizedBox(height: 10),
+                  // Checkbox Términos
+                  CheckboxListTile(
+                    value: _aceptaTerminos,
+                    onChanged: (v) => setState(() => _aceptaTerminos = v!),
+                    title: const Text(
+                      "Acepto términos y condiciones",
+                      style: TextStyle(fontSize: 12),
                     ),
+                    controlAffinity: ListTileControlAffinity.leading,
                   ),
+                  // Botón Registrarse
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.red)
+                        ? const CircularProgressIndicator()
                         : ElevatedButton(
-                            onPressed: () async {
-                              if (_formKey.currentState!.validate() &&
-                                  _aceptaTerminos) {
-                                setState(() => _isLoading = true);
-                                try {
-                                  final datosParaGuardar = {
-                                    'nombreUsuario': _usernameController.text
-                                        .trim(),
-                                    'nombres': _nombresController.text.trim(),
-                                    'apellidos': _apellidosController.text
-                                        .trim(),
-                                    'correo': _emailController.text.trim(),
-                                    'contrasena': _passwordController.text
-                                        .trim(),
-                                    'identificacion': _documentoController.text
-                                        .trim(),
-                                    'tipoDocumento': _selectedDocumentType,
-                                    'telefono': _telefonoController.text.trim(),
-                                    'fechaNacimiento': _dateController.text,
-                                    'idRol': _selectedRol ?? 'pasajero',
-                                  };
-
-                                  bool guardadoOk = await _enviarDatosDirecto(
-                                    datosParaGuardar,
-                                  );
-
-                                  if (guardadoOk) {
-                                    await AuthService()
-                                        .enviarCodigoVerificacion(
-                                          context: context,
-                                          userData: datosParaGuardar,
-                                        );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Error: El usuario ya existe o falla el servidor",
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("Error inesperado: $e"),
-                                    ),
-                                  );
-                                } finally {
-                                  if (mounted)
-                                    setState(() => _isLoading = false);
-                                }
-                              } else if (!_aceptaTerminos) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Debes aceptar los términos para continuar",
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
                             ),
+                            onPressed: _handleRegistroTradicional,
                             child: const Text(
                               "Regístrate",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                              ),
+                              style: TextStyle(color: Colors.white),
                             ),
                           ),
                   ),
                   const SizedBox(height: 25),
                   const Text(
                     "O regístrate con",
-                    style: TextStyle(color: Colors.black54, fontSize: 14),
+                    style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 20),
+                  // ✅ BOTONES SOCIALES ACTUALIZADOS
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _socialIcon(
                         'assets/images/facebook.png',
-                        () => debugPrint("FB"),
+                        () => debugPrint("Facebook"),
                       ),
                       const SizedBox(width: 25),
+                      // ✅ BOTÓN GMAIL (Usa AuthService Google)
                       _socialIcon(
                         'assets/images/correo.png',
-                        () => debugPrint("Email"),
+                        () => AuthService().signInWithGoogle(context),
                       ),
                       const SizedBox(width: 25),
                       _socialIcon(
                         'assets/images/instagram.png',
-                        () => debugPrint("IG"),
+                        () => debugPrint("Instagram"),
                       ),
                       const SizedBox(width: 25),
+                      // ✅ BOTÓN GOOGLE (Usa AuthService Google)
                       _socialIcon(
                         'assets/images/google.png',
-                        () => debugPrint("Google"),
+                        () => AuthService().signInWithGoogle(context),
                       ),
                     ],
                   ),
@@ -494,31 +347,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // Lógica del botón de registro manual
+  void _handleRegistroTradicional() async {
+    if (_formKey.currentState!.validate() && _aceptaTerminos) {
+      setState(() => _isLoading = true);
+      String numeroLimpio = _telefonoController.text.trim().replaceAll(' ', '');
+
+      final datos = {
+        'nombreUsuario': _usernameController.text.trim(),
+        'correo': _emailController.text.trim(),
+        'contrasena': _passwordController.text.trim(),
+        'telefono': numeroLimpio,
+        'idRol': _selectedRol ?? 'pasajero',
+      };
+
+      bool ok = await _enviarDatosDirecto(datos);
+      if (ok) {
+        await AuthService().enviarCodigoVerificacion(
+          context: context,
+          userData: datos,
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Error al registrar")));
+      }
+      setState(() => _isLoading = false);
+    }
+  }
+
   Widget _socialIcon(String assetPath, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
         ),
-        child: Image.asset(
-          assetPath,
-          height: 32,
-          width: 32,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.error, size: 30),
-        ),
+        child: Image.asset(assetPath, height: 32, width: 32),
       ),
     );
   }

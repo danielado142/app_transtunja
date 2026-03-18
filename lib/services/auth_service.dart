@@ -4,146 +4,88 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// ✅ Import de tus constantes (IP de XAMPP)
+
 import 'package:app_transtunja/config/constants.dart';
+import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
 
 class AuthService {
   final String baseUrl = ApiConfig.baseUrl;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // --- SECCIÓN 1: LOGIN TRADICIONAL (MYSQL/PHP) ---
+  // --- LOGIN TRADICIONAL ---
   Future<bool> login(String username, String password) async {
     final url = Uri.parse('$baseUrl/login.php');
     try {
-      final String cleanUser = username.trim();
-      final String cleanPass = password.trim();
-
       final response = await http
           .post(
             url,
             headers: {"Content-Type": "application/json"},
-            body: jsonEncode({"correo": cleanUser, "contrasena": cleanPass}),
+            body: jsonEncode({
+              "correo": username.trim(),
+              "contrasena": password.trim(),
+            }),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['status'] == 'success' || data['success'] == true) {
-          return true;
-        }
+        return data['status'] == 'success' || data['success'] == true;
       }
       return false;
     } catch (e) {
-      debugPrint("Error de conexión al servidor: $e");
+      debugPrint("Error login: $e");
       return false;
     }
   }
 
-  // --- SECCIÓN 2: REGISTRO (SMS FIREBASE + MYSQL) ---
+  // --- REGISTRO SMS ---
   Future<void> enviarCodigoVerificacion({
     required BuildContext context,
     required Map<String, dynamic> userData,
   }) async {
     try {
+      String tel = userData['telefono'].toString().trim().replaceAll(' ', '');
+      String telFormateado = tel.startsWith('+') ? tel : '+57$tel';
+
       await _auth.verifyPhoneNumber(
-        phoneNumber: '+57${userData['telefono']}',
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await _auth.signInWithCredential(credential);
+        phoneNumber: telFormateado,
+        verificationCompleted: (PhoneAuthCredential cred) async {
+          await _auth.signInWithCredential(cred);
           await insertarUsuarioMySQL(userData);
-          if (context.mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/mapa_pasajero',
-              (route) => false,
-            );
-          }
+          if (context.mounted)
+            Navigator.pushReplacementNamed(context, '/mapa_pasajero');
         },
-        verificationFailed: (FirebaseAuthException e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error de Firebase: ${e.message}")),
-          );
-        },
-        codeSent: (String verificationId, int? resendToken) {
+        verificationFailed: (e) => debugPrint("❌ Error SMS: ${e.code}"),
+        codeSent: (id, token) {
           Navigator.pushNamed(
             context,
             '/verification',
-            arguments: {'verificationId': verificationId, 'userData': userData},
+            arguments: {'verificationId': id, 'userData': userData},
           );
         },
-        codeAutoRetrievalTimeout: (String verificationId) {},
+        codeAutoRetrievalTimeout: (_) {},
       );
     } catch (e) {
-      debugPrint("Error al enviar código: $e");
-    }
-  }
-
-  Future<void> verificarCodigo({
-    required BuildContext context,
-    required String verificationId,
-    required String smsCode,
-    required Map<String, dynamic> userData,
-  }) async {
-    try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-      await _auth.signInWithCredential(credential);
-
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/registro.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(userData),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        if (result['status'] == 'success') {
-          if (context.mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/mapa_pasajero',
-              (route) => false,
-            );
-          }
-        } else {
-          throw Exception(result['message'] ?? "Error en el servidor");
-        }
-      } else {
-        throw Exception("Error de conexión (Código: ${response.statusCode})");
-      }
-    } catch (e) {
-      rethrow;
+      debugPrint("Error crítico SMS: $e");
     }
   }
 
   Future<bool> insertarUsuarioMySQL(Map<String, dynamic> datos) async {
-    final url = Uri.parse("$baseUrl/registro.php");
     try {
       final response = await http.post(
-        url,
+        Uri.parse("$baseUrl/registro.php"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(datos),
       );
-      if (response.statusCode == 200) {
-        final res = json.decode(response.body);
-        return res['status'] == 'success';
-      }
-      return false;
+      return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Error conectando a XAMPP: $e");
       return false;
     }
   }
 
-  // --- SECCIÓN 3: REDES SOCIALES (GOOGLE) ---
-
-  // ✅ CORREGIDO: Eliminado 'static' y añadido (BuildContext context)
+  // --- GOOGLE SIGN IN (Modificado para Registro/Login) ---
   Future<UserCredential?> signInWithGoogle(BuildContext context) async {
     try {
-      // 1. Configuración de Google Sign In
       final GoogleSignIn googleSignIn = kIsWeb
           ? GoogleSignIn(
               clientId:
@@ -151,11 +93,11 @@ class AuthService {
             )
           : GoogleSignIn();
 
-      // 2. Iniciar flujo de Google
+      await googleSignIn.signOut(); // Limpia caché para elegir cuenta nueva
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
       if (googleUser == null) return null;
 
-      // 3. Obtener credenciales de Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
@@ -163,59 +105,59 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      // 4. Autenticar en Firebase
       UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
       User? user = userCredential.user;
 
-      // 5. ✅ LOGICA DE SINCRONIZACIÓN CON MYSQL (XAMPP)
       if (user != null) {
-        final url = Uri.parse('${ApiConfig.baseUrl}/auth_google.php');
+        // 1. Sincronizamos con XAMPP (auth_google.php se encarga de ver si existe o crearlo)
+        await _sincronizarConXampp(user);
 
-        try {
-          final response = await http.post(
-            url,
+        // 2. Navegación limpia
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RoleSelectionScreen(
+                userData: {
+                  'nombreUsuario': user.displayName ?? "Usuario",
+                  'email': user.email,
+                  'google_id': user.uid,
+                },
+              ),
+            ),
+            (route) => false,
+          );
+        }
+      }
+      return userCredential;
+    } catch (e) {
+      debugPrint("Error Google: $e");
+      return null;
+    }
+  }
+
+  Future<void> _sincronizarConXampp(User user) async {
+    try {
+      await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/auth_google.php'),
             headers: {"Content-Type": "application/json"},
             body: jsonEncode({
               "nombre": user.displayName ?? "Usuario Google",
               "email": user.email,
               "google_id": user.uid,
-              "foto": user.photoURL ?? "",
             }),
-          );
-
-          if (response.statusCode == 200) {
-            debugPrint("Sincronizado con XAMPP: ${response.body}");
-            // Si la base de datos responde OK, navegamos al mapa
-            if (context.mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/mapa_pasajero',
-                (route) => false,
-              );
-            }
-          }
-        } catch (e) {
-          debugPrint("Error al enviar datos a XAMPP: $e");
-        }
-      }
-
-      return userCredential;
+          )
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
-      debugPrint("Error en Google Sign-In: $e");
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error en Google: $e")));
-      }
-      return null;
+      debugPrint("Error sincronización XAMPP: $e");
     }
   }
 
-  // Opcional: Implementación futura
-  Future<UserCredential?> signInWithFacebook() async {
-    debugPrint("Facebook no implementado aún");
-    return null;
+  Future<void> logout() async {
+    await _auth.signOut();
+    await GoogleSignIn().signOut();
   }
 }
