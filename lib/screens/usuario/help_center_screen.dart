@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'accessibility_screen.dart';
+import 'report_problem_screen.dart';
 
 class HelpCenterScreen extends StatefulWidget {
   const HelpCenterScreen({super.key});
@@ -260,8 +261,14 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
               icon: Icons.report_problem_outlined,
               title: 'Reportar un problema',
               subtitle: 'Cuéntanos si algo no funciona correctamente.',
-              onTap: () =>
-                  _showMockMessage('Formulario de reporte próximamente'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ReportProblemScreen(),
+                  ),
+                );
+              },
             ),
             _ActionCard(
               icon: Icons.lightbulb_outline,
