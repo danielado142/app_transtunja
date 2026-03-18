@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'help_center_screen.dart';
 import 'accessibility_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,11 +17,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _notificationsEnabled = true;
   bool _darkMode = false;
 
-  final String _name = "Usuario TransTunja";
-  final String _email = "usuario@email.com";
+  String _name = 'Usuario TransTunja';
+  String _email = 'usuario@email.com';
+  String _phone = '';
+  String? _gender = 'Prefiero no decirlo';
+
+  Future<void> _openEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfileScreen(
+          initialName: _name,
+          initialEmail: _email,
+          initialPhone: _phone,
+          initialGender: _gender,
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _name = result['name'] as String? ?? _name;
+        _email = result['email'] as String? ?? _email;
+        _phone = result['phone'] as String? ?? _phone;
+        _gender = result['gender'] as String? ?? _gender;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Perfil actualizado correctamente')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final subtitleExtra = [
+      if (_phone.trim().isNotEmpty) _phone,
+      if (_gender != null && _gender!.trim().isNotEmpty) _gender!,
+    ].join(' • ');
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       body: SafeArea(
@@ -29,13 +65,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const Center(
               child: Text(
-                "Perfil",
+                'Perfil',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Avatar + Info
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -72,15 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Colors.white,
                               size: 18,
                             ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Función de cambiar foto (mock)",
-                                  ),
-                                ),
-                              );
-                            },
+                            onPressed: _openEditProfile,
                           ),
                         ),
                       ),
@@ -96,22 +123,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(_email, style: const TextStyle(color: Colors.black54)),
+                  if (subtitleExtra.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitleExtra,
+                      style: const TextStyle(color: Colors.black45),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openEditProfile,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Editar perfil'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: red,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Preferencias
             _SectionCard(
-              title: "Preferencias",
+              title: 'Preferencias',
               children: [
                 SwitchListTile(
                   value: _notificationsEnabled,
                   activeColor: red,
                   onChanged: (v) => setState(() => _notificationsEnabled = v),
                   title: const Text(
-                    "Recibir notificaciones",
+                    'Recibir notificaciones',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   secondary: const Icon(Icons.notifications_none),
@@ -121,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   activeColor: red,
                   onChanged: (v) => setState(() => _darkMode = v),
                   title: const Text(
-                    "Modo oscuro (mock)",
+                    'Modo oscuro (mock)',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   secondary: const Icon(Icons.dark_mode_outlined),
@@ -131,20 +183,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 16),
 
-            // Cuenta
             _SectionCard(
-              title: "Cuenta",
+              title: 'Cuenta',
               children: [
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text(
+                    'Editar datos personales',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _openEditProfile,
+                ),
+                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.lock_outline),
                   title: const Text(
-                    "Cambiar contraseña",
+                    'Cambiar contraseña',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Función futura")),
+                      const SnackBar(content: Text('Función futura')),
                     );
                   },
                 ),
@@ -152,13 +213,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text(
-                    "Política de privacidad",
+                    'Política de privacidad',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Función futura")),
+                      const SnackBar(content: Text('Función futura')),
                     );
                   },
                 ),
@@ -167,14 +228,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 16),
 
-            // Soporte e inclusión
             _SectionCard(
-              title: "Soporte e inclusión",
+              title: 'Soporte e inclusión',
               children: [
                 ListTile(
                   leading: const Icon(Icons.help_outline),
                   title: const Text(
-                    "Centro de ayuda",
+                    'Centro de ayuda',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   trailing: const Icon(Icons.chevron_right),
@@ -191,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ListTile(
                   leading: const Icon(Icons.accessibility_new),
                   title: const Text(
-                    "Accesibilidad",
+                    'Accesibilidad',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   trailing: const Icon(Icons.chevron_right),
@@ -209,18 +269,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 20),
 
-            // Cerrar sesión
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Cerrar sesión (mock)")),
+                    const SnackBar(content: Text('Cerrar sesión (mock)')),
                   );
                 },
                 icon: const Icon(Icons.logout),
                 label: const Text(
-                  "Cerrar sesión",
+                  'Cerrar sesión',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
                 style: OutlinedButton.styleFrom(
