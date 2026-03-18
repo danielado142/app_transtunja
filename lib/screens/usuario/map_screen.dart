@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../models/bus_stop_model.dart';
+import '../../models/destination_suggestion_model.dart';
+import '../../models/map_route_model.dart';
+import '../../models/map_summary_model.dart';
+import '../../services/map_service.dart';
 import 'route_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -17,47 +22,85 @@ class _MapScreenState extends State<MapScreen> {
   static const red = Color(0xFFD10000);
 
   final MapController _mapController = MapController();
+  final MapService _mapService = MapService();
 
-  // Centro fijo en Tunja
-  final LatLng _tunjaCenter = const LatLng(5.5353, -73.3678);
-
-  // Ruta demo
-  late final List<LatLng> _demoRoute = [
-    const LatLng(5.5353, -73.3678),
-    const LatLng(5.5364, -73.3666),
-    const LatLng(5.5376, -73.3654),
-    const LatLng(5.5388, -73.3642),
-    const LatLng(5.5398, -73.3633),
-  ];
-
-  // Paraderos demo
-  late final List<_BusStop> _stops = [
-    const _BusStop(
-      name: 'Plaza Real',
-      position: LatLng(5.5353, -73.3678),
-      isMain: true,
-    ),
-    const _BusStop(
-      name: 'Parque Santander',
-      position: LatLng(5.5376, -73.3654),
-    ),
-    const _BusStop(name: 'UPTC', position: LatLng(5.5398, -73.3633)),
-  ];
+  LatLng _tunjaCenter = MapService.tunjaCenter;
+  MapRouteModel? _demoRoute;
+  List<BusStopModel> _stops = [];
+  LatLng? _busPosition;
+  MapSummaryModel? _summary;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadMapData();
+  }
+
+  Future<void> _loadMapData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final center = await _mapService.getMapCenter();
+      final route = await _mapService.getDemoRoute();
+      final stops = await _mapService.getBusStops();
+      final busPosition = await _mapService.getBusPosition();
+      final summary = await _mapService.getMapSummary();
+
+      if (!mounted) return;
+
+      setState(() {
+        _tunjaCenter = center;
+        _demoRoute = route;
+        _stops = stops;
+        _busPosition = busPosition;
+        _summary = summary;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cargar mapa: $e')));
+    }
   }
 
   void _goToMyLocation() {
     _mapController.move(_tunjaCenter, 15.5);
   }
 
+  void _goToNearestStop() {
+    if (_stops.isEmpty) return;
+    _mapController.move(_stops.first.position, 15.5);
+  }
+
+  void _openDestinationSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _DestinationSheet(
+        mapService: _mapService,
+        onGoToRoutes: widget.onGoToRoutes,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    const stopName = 'Plaza Real';
-    const etaText = '4 min';
-    const routeName = 'Centro - UPTC';
+    final routeName = _summary?.routeName ?? 'Ruta no disponible';
+    final stopName = _summary?.stopName ?? 'Parada no disponible';
+    final etaText = _summary?.etaText ?? '--';
 
     return Scaffold(
       appBar: AppBar(
@@ -72,218 +115,204 @@ class _MapScreenState extends State<MapScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Stack(
-          children: [
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _tunjaCenter,
-                initialZoom: 14.5,
-                minZoom: 12,
-                maxZoom: 18,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.example.app_transtunja',
-                ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(points: _demoRoute, strokeWidth: 5, color: red),
-                  ],
-                ),
-                MarkerLayer(
-                  markers: [
-                    ..._stops.map(
-                      (stop) => Marker(
-                        point: stop.position,
-                        width: 90,
-                        height: 70,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 6,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                stop.name,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.location_pin,
-                              size: stop.isMain ? 38 : 32,
-                              color: stop.isMain ? red : Colors.black87,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _tunjaCenter,
+                      initialZoom: 14.5,
+                      minZoom: 12,
+                      maxZoom: 18,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c'],
+                        userAgentPackageName: 'com.example.app_transtunja',
+                      ),
+                      if (_demoRoute != null)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _demoRoute!.points,
+                              strokeWidth: 5,
+                              color: red,
                             ),
                           ],
                         ),
+                      MarkerLayer(
+                        markers: [
+                          ..._stops.map(
+                            (stop) => Marker(
+                              point: stop.position,
+                              width: 90,
+                              height: 70,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      stop.name,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.location_pin,
+                                    size: stop.isMain ? 38 : 32,
+                                    color: stop.isMain ? red : Colors.black87,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_busPosition != null)
+                            Marker(
+                              point: _busPosition!,
+                              width: 44,
+                              height: 44,
+                              child: const Icon(
+                                Icons.directions_bus,
+                                size: 34,
+                                color: Colors.blue,
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                    Marker(
-                      point: const LatLng(5.5388, -73.3642),
-                      width: 44,
-                      height: 44,
-                      child: const Icon(
-                        Icons.directions_bus,
-                        size: 34,
-                        color: Colors.blue,
+                      RichAttributionWidget(
+                        attributions: const [
+                          TextSourceAttribution('OpenStreetMap contributors'),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                RichAttributionWidget(
-                  attributions: const [
-                    TextSourceAttribution('OpenStreetMap contributors'),
-                  ],
-                ),
-              ],
-            ),
+                    ],
+                  ),
 
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 120,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.black26, Colors.transparent],
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Container(
+                        height: 120,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.black26, Colors.transparent],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
 
-            Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
-              child: _SearchBarButton(
-                onTap: () => _openDestinationSheet(context),
-              ),
-            ),
-
-            Positioned(
-              top: 78,
-              left: 16,
-              right: 16,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _QuickChip(
-                      icon: Icons.alt_route,
-                      label: 'Rutas populares',
-                      onTap: widget.onGoToRoutes,
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: _SearchBarButton(
+                      onTap: () => _openDestinationSheet(context),
                     ),
-                    const SizedBox(width: 10),
-                    _QuickChip(
-                      icon: Icons.place_outlined,
-                      label: 'Paradas cercanas',
-                      onTap: () {
-                        _mapController.move(_stops.first.position, 15.5);
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    _QuickChip(
-                      icon: Icons.star_border,
-                      label: 'Favoritas',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
 
-            Positioned(
-              right: 16,
-              bottom: 190,
-              child: FloatingActionButton(
-                onPressed: _goToMyLocation,
-                backgroundColor: Colors.white,
-                elevation: 2,
-                child: const Icon(Icons.my_location, color: Colors.black87),
-              ),
-            ),
-
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 88,
-              child: _BottomInfoCard(
-                stopName: stopName,
-                etaText: etaText,
-                routeName: routeName,
-                onGoToRoutes: widget.onGoToRoutes,
-                onDetails: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RouteDetailScreen(
-                        routeName: routeName,
-                        stopName: stopName,
-                        etaText: etaText,
+                  Positioned(
+                    top: 78,
+                    left: 16,
+                    right: 16,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _QuickChip(
+                            icon: Icons.alt_route,
+                            label: 'Rutas populares',
+                            onTap: widget.onGoToRoutes,
+                          ),
+                          const SizedBox(width: 10),
+                          _QuickChip(
+                            icon: Icons.place_outlined,
+                            label: 'Paradas cercanas',
+                            onTap: _goToNearestStop,
+                          ),
+                          const SizedBox(width: 10),
+                          _QuickChip(
+                            icon: Icons.star_border,
+                            label: 'Favoritas',
+                            onTap: () {},
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
+                  ),
+
+                  Positioned(
+                    right: 16,
+                    bottom: 190,
+                    child: FloatingActionButton(
+                      onPressed: _goToMyLocation,
+                      backgroundColor: Colors.white,
+                      elevation: 2,
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 88,
+                    child: _BottomInfoCard(
+                      stopName: stopName,
+                      etaText: etaText,
+                      routeName: routeName,
+                      onGoToRoutes: widget.onGoToRoutes,
+                      onDetails: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RouteDetailScreen(
+                              routeName: routeName,
+                              stopName: stopName,
+                              etaText: etaText,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
-
-  void _openDestinationSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _DestinationSheet(onGoToRoutes: widget.onGoToRoutes),
-    );
-  }
-}
-
-class _BusStop {
-  final String name;
-  final LatLng position;
-  final bool isMain;
-
-  const _BusStop({
-    required this.name,
-    required this.position,
-    this.isMain = false,
-  });
 }
 
 class _SearchBarButton extends StatelessWidget {
   final VoidCallback onTap;
+
   const _SearchBarButton({required this.onTap});
 
   @override
@@ -459,7 +488,12 @@ class _BottomInfoCard extends StatelessWidget {
 
 class _DestinationSheet extends StatefulWidget {
   final VoidCallback onGoToRoutes;
-  const _DestinationSheet({required this.onGoToRoutes});
+  final MapService mapService;
+
+  const _DestinationSheet({
+    required this.onGoToRoutes,
+    required this.mapService,
+  });
 
   @override
   State<_DestinationSheet> createState() => _DestinationSheetState();
@@ -470,19 +504,36 @@ class _DestinationSheetState extends State<_DestinationSheet> {
   final FocusNode _focusNode = FocusNode();
 
   String _selected = '';
-
-  final List<String> _suggestions = const [
-    'UPTC (Universidad Pedagógica y Tecnológica)',
-    'Terminal de Transportes de Tunja',
-    'Centro Comercial Unicentro',
-  ];
+  List<DestinationSuggestionModel> _suggestions = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadSuggestions();
+
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _focusNode.requestFocus();
     });
+  }
+
+  Future<void> _loadSuggestions() async {
+    try {
+      final suggestions = await widget.mapService.getDestinationSuggestions();
+
+      if (!mounted) return;
+
+      setState(() {
+        _suggestions = suggestions;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -538,7 +589,9 @@ class _DestinationSheetState extends State<_DestinationSheet> {
               IconButton(
                 onPressed: () {
                   _controller.clear();
-                  setState(() => _selected = '');
+                  setState(() {
+                    _selected = '';
+                  });
                 },
                 icon: const Icon(Icons.close),
               ),
@@ -555,21 +608,27 @@ class _DestinationSheetState extends State<_DestinationSheet> {
             ),
           ),
           const SizedBox(height: 10),
-          ..._suggestions.map(
-            (s) => _SuggestionTile(
-              text: s,
-              isSelected: _selected == s,
-              onTap: () {
-                setState(() {
-                  _selected = s;
-                  _controller.text = s;
-                  _controller.selection = TextSelection.fromPosition(
-                    TextPosition(offset: _controller.text.length),
-                  );
-                });
-              },
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: CircularProgressIndicator(),
+            )
+          else
+            ..._suggestions.map(
+              (suggestion) => _SuggestionTile(
+                text: suggestion.text,
+                isSelected: _selected == suggestion.text,
+                onTap: () {
+                  setState(() {
+                    _selected = suggestion.text;
+                    _controller.text = suggestion.text;
+                    _controller.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _controller.text.length),
+                    );
+                  });
+                },
+              ),
             ),
-          ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
