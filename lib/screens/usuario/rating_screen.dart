@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../models/rating_model.dart';
+import '../../services/rating_service.dart';
+
 class RatingScreen extends StatefulWidget {
   const RatingScreen({super.key});
 
@@ -14,7 +17,10 @@ class _RatingScreenState extends State<RatingScreen> {
   final TextEditingController _routeCtrl = TextEditingController();
   final TextEditingController _commentCtrl = TextEditingController();
 
+  final RatingService _ratingService = RatingService();
+
   int _stars = 0;
+  bool _isSubmitting = false;
 
   final List<String> _tags = const [
     "Puntualidad",
@@ -57,6 +63,54 @@ class _RatingScreenState extends State<RatingScreen> {
   }
 
   bool get _canSend => _busIdValid && _stars > 0;
+
+  Future<void> _submitRating() async {
+    if (!_canSend || _isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final rating = RatingModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        busId: _busId.toUpperCase(),
+        route: _routeCtrl.text.trim(),
+        stars: _stars,
+        tags: _selectedTags.toList(),
+        comment: _commentCtrl.text.trim(),
+        createdAt: DateTime.now(),
+      );
+
+      await _ratingService.submitRating(rating);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Calificación enviada para: ${rating.busId} ✅")),
+      );
+
+      setState(() {
+        _busIdCtrl.clear();
+        _routeCtrl.clear();
+        _commentCtrl.clear();
+        _stars = 0;
+        _selectedTags.clear();
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error al enviar: $e")));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,24 +354,7 @@ class _RatingScreenState extends State<RatingScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _canSend
-                    ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              "Calificación enviada para: ${_busId.toUpperCase()} ✅",
-                            ),
-                          ),
-                        );
-                        setState(() {
-                          _busIdCtrl.clear();
-                          _routeCtrl.clear();
-                          _commentCtrl.clear();
-                          _stars = 0;
-                          _selectedTags.clear();
-                        });
-                      }
-                    : null,
+                onPressed: _canSend && !_isSubmitting ? _submitRating : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: red,
                   foregroundColor: Colors.white,
@@ -327,10 +364,19 @@ class _RatingScreenState extends State<RatingScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  "Enviar calificación",
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        "Enviar calificación",
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
               ),
             ),
 
@@ -349,6 +395,7 @@ class _RatingScreenState extends State<RatingScreen> {
 
 class _Card extends StatelessWidget {
   final Widget child;
+
   const _Card({required this.child});
 
   @override

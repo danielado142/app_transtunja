@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../models/notification_model.dart';
+import '../../services/notification_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -11,39 +13,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const red = Color(0xFFD10000);
 
   bool _onlyImportant = false;
+  late final List<NotificationModel> _all;
 
-  final List<_Notif> _all = const [
-    _Notif(
-      title: "Retraso en ruta Centro - UPTC",
-      body: "Se reporta congestión. Tiempo estimado +6 min.",
-      time: "Hace 5 min",
-      type: _NotifType.warning,
-      important: true,
-    ),
-    _Notif(
-      title: "Nueva parada habilitada",
-      body: "Se agregó la parada “Avenida Norte” para rutas hacia Unicentro.",
-      time: "Hoy",
-      type: _NotifType.info,
-      important: false,
-    ),
-    _Notif(
-      title: "Mantenimiento programado",
-      body: "Algunas rutas tendrán cambios temporales el fin de semana.",
-      time: "Ayer",
-      type: _NotifType.important,
-      important: true,
-    ),
-    _Notif(
-      title: "Recordatorio",
-      body: "Califica tu último viaje para mejorar el servicio.",
-      time: "Ayer",
-      type: _NotifType.info,
-      important: false,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _all = NotificationService.getNotifications();
+  }
 
-  List<_Notif> get _filtered {
+  List<NotificationModel> get _filtered {
     if (!_onlyImportant) return _all;
     return _all.where((n) => n.important).toList();
   }
@@ -198,49 +176,31 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-enum _NotifType { info, warning, important }
-
-class _Notif {
-  final String title;
-  final String body;
-  final String time;
-  final _NotifType type;
-  final bool important;
-
-  const _Notif({
-    required this.title,
-    required this.body,
-    required this.time,
-    required this.type,
-    required this.important,
-  });
-}
-
 class _NotifCard extends StatelessWidget {
   static const red = Color(0xFFD10000);
 
-  final _Notif notif;
+  final NotificationModel notif;
 
   const _NotifCard({required this.notif});
 
   @override
   Widget build(BuildContext context) {
     final icon = switch (notif.type) {
-      _NotifType.info => Icons.info_outline,
-      _NotifType.warning => Icons.warning_amber_outlined,
-      _NotifType.important => Icons.report_gmailerrorred_outlined,
+      NotificationType.info => Icons.info_outline,
+      NotificationType.warning => Icons.warning_amber_outlined,
+      NotificationType.important => Icons.report_gmailerrorred_outlined,
     };
 
     final badgeText = switch (notif.type) {
-      _NotifType.info => "INFO",
-      _NotifType.warning => "ALERTA",
-      _NotifType.important => "IMPORTANTE",
+      NotificationType.info => "INFO",
+      NotificationType.warning => "ALERTA",
+      NotificationType.important => "IMPORTANTE",
     };
 
     final badgeColor = switch (notif.type) {
-      _NotifType.info => Colors.black87,
-      _NotifType.warning => red,
-      _NotifType.important => red,
+      NotificationType.info => Colors.black87,
+      NotificationType.warning => red,
+      NotificationType.important => red,
     };
 
     return Container(
@@ -268,8 +228,8 @@ class _NotifCard extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               color:
-                  (notif.type == _NotifType.warning ||
-                      notif.type == _NotifType.important)
+                  (notif.type == NotificationType.warning ||
+                      notif.type == NotificationType.important)
                   ? red.withOpacity(0.12)
                   : Colors.black12,
               borderRadius: BorderRadius.circular(14),
@@ -277,8 +237,8 @@ class _NotifCard extends StatelessWidget {
             child: Icon(
               icon,
               color:
-                  (notif.type == _NotifType.warning ||
-                      notif.type == _NotifType.important)
+                  (notif.type == NotificationType.warning ||
+                      notif.type == NotificationType.important)
                   ? red
                   : Colors.black87,
             ),
