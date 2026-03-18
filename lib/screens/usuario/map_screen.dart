@@ -18,7 +18,7 @@ class _MapScreenState extends State<MapScreen> {
 
   final MapController _mapController = MapController();
 
-  // Centro aproximado de Tunja
+  // Centro fijo en Tunja
   final LatLng _tunjaCenter = const LatLng(5.5353, -73.3678);
 
   // Ruta demo
@@ -44,8 +44,13 @@ class _MapScreenState extends State<MapScreen> {
     const _BusStop(name: 'UPTC', position: LatLng(5.5398, -73.3633)),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void _goToMyLocation() {
-    _mapController.move(_tunjaCenter, 15.0);
+    _mapController.move(_tunjaCenter, 15.5);
   }
 
   @override
@@ -68,7 +73,9 @@ class _MapScreenState extends State<MapScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
                   userAgentPackageName: 'com.example.app_transtunja',
                 ),
                 PolylineLayer(
