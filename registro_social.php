@@ -1,7 +1,14 @@
 <?php
+// 1. IMPORTAR LA CONEXIÓN DE LA NUBE
 include 'conexion.php'; 
 
-// Recibimos los datos de Flutter
+// 2. CONFIGURAR CABECERAS PARA FLUTTER
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header('Content-Type: application/json; charset=utf-8');
+
+// 3. RECIBIR DATOS DE FLUTTER
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
@@ -10,23 +17,30 @@ if ($data) {
     $email = $data['email'];
     $metodo = $data['metodo'];
 
-    // Verificamos si el usuario ya existe por su correo
-    $consulta = "SELECT * FROM usuarios WHERE email = '$email'";
-    $resultado = $conn->query($consulta);
+    // NOTA: Revisa si tu tabla es 'usuario' o 'usuarios'. 
+    // En tus archivos anteriores era 'usuario'. Lo corregiré a 'usuario'.
+    
+    // Verificamos si el usuario ya existe por su correo (Usando la variable $conexion de tu conexion.php)
+    $consulta = "SELECT * FROM usuario WHERE correo = '$email'";
+    $resultado = $conexion->query($consulta);
 
-    if ($resultado->num_rows > 0) {
-        // Si ya existe, no hacemos nada o actualizamos
+    if ($resultado && $resultado->num_rows > 0) {
+        // Si ya existe
         echo json_encode(["status" => "success", "message" => "Sesión iniciada con $metodo"]);
     } else {
         // Si es nuevo, lo insertamos
-        $sql = "INSERT INTO usuarios (nombre, email, metodo_registro) VALUES ('$nombre', '$email', '$metodo')";
+        // Ajusté los nombres de columnas para que coincidan con 'nombre' y 'correo' de tus otros scripts
+        $sql = "INSERT INTO usuario (nombre, correo, metodo_registro) VALUES ('$nombre', '$email', '$metodo')";
         
-        if ($conn->query($sql) === TRUE) {
-            echo json_encode(["status" => "success", "message" => "Usuario registrado"]);
+        if ($conexion->query($sql) === TRUE) {
+            echo json_encode(["status" => "success", "message" => "Usuario registrado en la nube"]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Error: " . $conn->error]);
+            echo json_encode(["status" => "error", "message" => "Error al registrar: " . $conexion->error]);
         }
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "No se recibieron datos"]);
 }
-$conn->close();
+
+$conexion->close();
 ?>

@@ -3,6 +3,7 @@ error_reporting(0);
 ini_set('display_errors', 0); 
 header('Content-Type: application/json; charset=utf-8');
 
+// Este include ahora usará la conexión de Clever Cloud que configuramos antes
 include 'conexion.php';
 
 $json = file_get_contents('php://input');
@@ -27,10 +28,10 @@ if(isset($data['correo']) && !isset($data['contrasena'])) {
             "userData" => $usuario
         ];
     } else {
-        // El usuario entró con Google pero no existe en tu MySQL de XAMPP
+        // El usuario entró con Google pero no existe en la base de datos de la nube
         $response = [
             "status" => "new_user", 
-            "message" => "Usuario de Google no encontrado en la base de datos local"
+            "message" => "Usuario de Google no encontrado en la base de datos"
         ];
     }
 } 
@@ -48,7 +49,7 @@ else if(isset($data['correo']) && isset($data['contrasena'])) {
         $usuario = $resultado->fetch_assoc();
         $contrasena_en_bd = $usuario['contrasena'];
 
-        // Verificación compatible con texto plano y hash
+        // Verificación compatible con texto plano (XAMPP antiguo) y hash (Seguridad recomendada)
         if ($contrasena_ingresada === $contrasena_en_bd || password_verify($contrasena_ingresada, $contrasena_en_bd)) {
             $response = [
                 "status" => "success",
@@ -65,4 +66,4 @@ else if(isset($data['correo']) && isset($data['contrasena'])) {
 
 echo json_encode($response);
 exit; 
-?>  
+?>

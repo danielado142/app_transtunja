@@ -1,38 +1,43 @@
 <?php
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
-include 'db_conexion.php'; 
+// 1. IMPORTAR LA CONEXIÓN DE LA NUBE
+// Usamos 'conexion.php' que es el que tiene los datos de Clever Cloud
+include 'conexion.php'; 
 
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (isset($data['email']) && isset($data['google_id'])) {
-    $nombre = $conn->real_escape_string($data['nombre']);
-    $email = $conn->real_escape_string($data['email']);
-    $google_id = $conn->real_escape_string($data['google_id']);
+    // Usamos $conexion (que es la variable definida en tu conexion.php)
+    $nombre = $conexion->real_escape_string($data['nombre']);
+    $email = $conexion->real_escape_string($data['email']);
+    $google_id = $conexion->real_escape_string($data['google_id']);
 
-    // 1. Verificar si el usuario ya existe
-    $checkUser = $conn->query("SELECT * FROM usuarios WHERE correo = '$email'");
+    // 2. Verificar si el usuario ya existe (Cambié 'usuarios' por 'usuario')
+    $checkUser = $conexion->query("SELECT * FROM usuario WHERE correo = '$email'");
 
-    if ($checkUser->num_rows > 0) {
-        // 2. Si existe, actualizamos el google_id por si entró antes por login normal
-        $conn->query("UPDATE usuarios SET google_id = '$google_id' WHERE correo = '$email'");
-        echo json_encode(["status" => "success", "message" => "Usuario actualizado"]);
+    if ($checkUser && $checkUser->num_rows > 0) {
+        // 3. Si existe, actualizamos el google_id (Asegúrate de tener esta columna en tu tabla)
+        $conexion->query("UPDATE usuario SET google_id = '$google_id' WHERE correo = '$email'");
+        echo json_encode(["status" => "success", "message" => "Sesión de Google iniciada (Usuario actualizado)"]);
     } else {
-        // 3. Si NO existe, lo registramos (sin contraseña, entra por Google)
-        $insert = "INSERT INTO usuarios (nombre, correo, google_id, rol) 
-                   VALUES ('$nombre', '$email', '$google_id', 'pasajero')";
+        // 4. Si NO existe, lo registramos como pasajero por defecto
+        // NOTA: Verifica que tu tabla 'usuario' tenga las columnas 'nombreCompleto' y 'google_id'
+        $insert = "INSERT INTO usuario (nombreCompleto, correo, google_id, idRol, estado) 
+                   VALUES ('$nombre', '$email', '$google_id', 'pasajero', 'activo')";
         
-        if ($conn->query($insert)) {
-            echo json_encode(["status" => "success", "message" => "Usuario registrado"]);
+        if ($conexion->query($insert)) {
+            echo json_encode(["status" => "success", "message" => "Usuario de Google registrado en la nube"]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Error al insertar"]);
+            echo json_encode(["status" => "error", "message" => "Error al insertar: " . $conexion->error]);
         }
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "Datos incompletos"]);
+    echo json_encode(["status" => "error", "message" => "Datos de Google incompletos"]);
 }
-$conn->close();
+
+$conexion->close();
 ?>

@@ -3,26 +3,29 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-// 2. IMPORTAR ARCHIVOS (Rutas correctas según tu carpeta)
+// 2. IMPORTAR ARCHIVOS (Asegúrate de que la carpeta PHPMailer esté en Clever Cloud)
 require 'PHPMailer/Exception.php';
 require 'PHPMailer/PHPMailer.php';
 require 'PHPMailer/SMTP.php';
 
-// Para usar las clases sin 'use', las llamamos directamente abajo
-$mail = new PHPMailer\PHPMailer\PHPMailer(true);
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-// 3. CONEXIÓN A LA BASE DE DATOS
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "base de datos"; // <--- REVISA SI LLEVA ESPACIO AL FINAL O NO
+$mail = new PHPMailer(true);
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+// 3. CONEXIÓN A LA BASE DE DATOS (ACTUALIZADA A CLEVER CLOUD)
+$servername = "bi6x2hsfzn2upz5oyduw-mysql.services.clever-cloud.com";
+$username = "usuknrznybomewtn";
+$password = "f4YbvuIVeFTN7Ed3Klu7";
+$dbname = "bi6x2hsfzn2upz5oyduw";
+$port = 3306;
+
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
 
 if ($conn->connect_error) {
-    die(json_encode(["existe" => false, "mensaje" => "Error de conexión a BD"]));
+    die(json_encode(["existe" => false, "mensaje" => "Error de conexión a BD en la nube"]));
 }
 
 // 4. LEER DATOS DE FLUTTER
@@ -33,8 +36,6 @@ if (!isset($data['correo'])) {
     die(json_encode(["existe" => false, "mensaje" => "Correo no proporcionado"]));
 }
 $correo = $data['correo'];
-
-// ... (El resto de tu lógica de buscar usuario e insertar token está PERFECTA)
 
 // 5. BUSCAR USUARIO
 $query_user = $conn->prepare("SELECT id_usuario FROM usuario WHERE correo = ?");
@@ -53,20 +54,21 @@ if ($res_user->num_rows > 0) {
     
     if ($ins->execute()) {
         try {
-            // Configuración Gmail
+            // Configuración Gmail (Tu clave de aplicación sigue siendo válida)
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'elizabethramirezton618@gmail.com';
-            $mail->Password   = 'vlugbkjtulrwovny'; // Tu clave de aplicación de 16 letras
-            $mail->SMTPSecure = 'tls'; // Cambiado para mayor compatibilidad
+            $mail->Password   = 'vlugbkjtulrwovny'; 
+            $mail->SMTPSecure = 'tls';
             $mail->Port       = 587;
+            $mail->CharSet    = 'UTF-8';
 
             $mail->setFrom('elizabethramirezton618@gmail.com', 'TransTunja Soporte');
             $mail->addAddress($correo);
 
             $mail->isHTML(true);
-            $mail->Subject = 'Codigo de Recuperacion - TransTunja';
+            $mail->Subject = 'Código de Recuperación - TransTunja';
             $mail->Body    = "Hola, has solicitado restablecer tu contraseña.<br>Tu código es: <b>$token</b><br>Expira en 15 minutos.";
             
             $mail->send();
