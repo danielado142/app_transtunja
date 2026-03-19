@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _rememberMe = false;
-  bool _isLoading = false; // Añadido para feedback visual
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -52,14 +52,24 @@ class _LoginScreenState extends State<LoginScreen> {
       final response = await http
           .post(
             Uri.parse(urlApi),
-            headers: {"Content-Type": "application/json"},
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              // ✅ DISFRAZ COMPLETO PARA INFINITYFREE
+              "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Accept-Language": "es-ES,es;q=0.9",
+              "Origin": "https://transtunja-app.infinityfree.me",
+              "Referer": "https://transtunja-app.infinityfree.me/",
+            },
             body: jsonEncode({
               "correo": _emailController.text.trim(),
               "contrasena": _passwordController.text.trim(),
             }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 12));
 
+      // Verificamos si la respuesta es JSON válido
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
@@ -77,9 +87,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error de conexión con XAMPP: $e")),
-      );
+
+      // Si el error contiene "HTML", es que el bloqueo de InfinityFree persiste
+      String errorMsg = e.toString();
+      if (errorMsg.contains("html") || errorMsg.contains("SyntaxError")) {
+        errorMsg = "El servidor gratuito bloqueó la conexión (Seguridad AES).";
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $errorMsg")));
+      debugPrint("Error detallado: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -181,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
             const SizedBox(height: 15),
 
-            // --- BOTÓN GOOGLE CORREGIDO ---
+            // --- BOTÓN GOOGLE ---
             ElevatedButton.icon(
               icon: Image.asset(
                 'assets/images/google.png',
@@ -191,14 +209,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               label: const Text("Continuar con Google"),
               onPressed: () async {
-                // ✅ CAMBIO CLAVE: Usamos la instancia y pasamos el context
                 final userCredential = await _authService.signInWithGoogle(
                   context,
                 );
 
                 if (userCredential != null && mounted) {
-                  // El AuthService ya maneja la navegación,
-                  // pero si quieres asegurar una ruta aquí puedes hacerlo.
                   debugPrint(
                     "Login exitoso con Google: ${userCredential.user?.email}",
                   );

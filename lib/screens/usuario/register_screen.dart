@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-// ✅ Importamos la configuración y servicios
+// ✅ Importaciones de configuración y servicios
 import 'package:app_transtunja/config/constants.dart';
 import 'package:app_transtunja/services/auth_service.dart';
 import 'package:app_transtunja/screens/usuario/verification_screen.dart';
@@ -38,7 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _aceptaTerminos = false;
   bool _isLoading = false;
 
-  // --- FUNCIÓN PARA ENVIAR A MYSQL (XAMPP) ---
+  // --- FUNCIÓN PARA ENVIAR A MYSQL (CON SUPER HEADERS PARA INFINITYFREE) ---
   Future<bool> _enviarDatosDirecto(Map<String, dynamic> datos) async {
     final String urlApi = '${ApiConfig.baseUrl}/registro.php';
 
@@ -46,18 +46,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final response = await http
           .post(
             Uri.parse(urlApi),
-            headers: {"Content-Type": "application/json"},
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              // ✅ EL DISFRAZ COMPLETO PARA EVITAR EL BLOQUEO AES DE SEGURIDAD
+              "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Accept-Language": "es-ES,es;q=0.9",
+              "Origin": "https://transtunja-app.infinityfree.me",
+              "Referer": "https://transtunja-app.infinityfree.me/",
+            },
             body: jsonEncode(datos),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
+        // Si la respuesta contiene HTML, InfinityFree nos bloqueó el paso
+        if (response.body.contains("<html>")) {
+          debugPrint(
+            "❌ Error: El servidor envió un reto de seguridad (HTML) en lugar de JSON.",
+          );
+          return false;
+        }
+
         final respuestaJson = json.decode(response.body);
         return respuestaJson['status'] == 'success';
       }
       return false;
     } catch (e) {
-      debugPrint("❌ Error de red XAMPP: $e");
+      debugPrint("❌ Error de red en el servidor: $e");
       return false;
     }
   }
@@ -310,7 +327,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 20),
-                  // ✅ BOTONES SOCIALES ACTUALIZADOS
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -319,7 +335,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         () => debugPrint("Facebook"),
                       ),
                       const SizedBox(width: 25),
-                      // ✅ BOTÓN GMAIL (Usa AuthService Google)
                       _socialIcon(
                         'assets/images/correo.png',
                         () => AuthService().signInWithGoogle(context),
@@ -330,7 +345,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         () => debugPrint("Instagram"),
                       ),
                       const SizedBox(width: 25),
-                      // ✅ BOTÓN GOOGLE (Usa AuthService Google)
                       _socialIcon(
                         'assets/images/google.png',
                         () => AuthService().signInWithGoogle(context),
@@ -347,7 +361,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Lógica del botón de registro manual
   void _handleRegistroTradicional() async {
     if (_formKey.currentState!.validate() && _aceptaTerminos) {
       setState(() => _isLoading = true);
@@ -362,17 +375,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
       };
 
       bool ok = await _enviarDatosDirecto(datos);
+
+      if (!mounted) return;
+
       if (ok) {
+        // OJO: Si este método de AuthService también llama a la API, necesitará los mismos headers
         await AuthService().enviarCodigoVerificacion(
           context: context,
           userData: datos,
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Error al registrar")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Error al registrar: Servidor bloqueado o datos inválidos",
+            ),
+          ),
+        );
       }
       setState(() => _isLoading = false);
+    } else if (!_aceptaTerminos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Debes aceptar los términos")),
+      );
     }
   }
 

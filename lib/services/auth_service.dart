@@ -9,25 +9,41 @@ import 'package:app_transtunja/config/constants.dart';
 import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
 
 class AuthService {
-  final String baseUrl = ApiConfig.baseUrl;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = kIsWeb
+      ? GoogleSignIn(
+          clientId:
+              "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
+        )
+      : GoogleSignIn();
+
+  // ✅ Headers globales corregidos para burlar el bloqueo de InfinityFree
+  Map<String, String> get _headers => {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept-Language": "es-ES,es;q=0.9",
+    "Origin": "https://transtunja-app.infinityfree.me",
+    "Referer": "https://transtunja-app.infinityfree.me/",
+  };
 
   // --- LOGIN TRADICIONAL ---
   Future<bool> login(String username, String password) async {
-    final url = Uri.parse('$baseUrl/login.php');
+    final url = Uri.parse('${ApiConfig.baseUrl}/login.php');
     try {
       final response = await http
           .post(
             url,
-            headers: {"Content-Type": "application/json"},
+            headers: _headers,
             body: jsonEncode({
               "correo": username.trim(),
               "contrasena": password.trim(),
             }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && !response.body.contains("<html>")) {
         final data = jsonDecode(response.body);
         return data['status'] == 'success' || data['success'] == true;
       }
@@ -38,7 +54,7 @@ class AuthService {
     }
   }
 
-  // --- REGISTRO SMS ---
+  // --- REGISTRO SMS (FIREBASE) ---
   Future<void> enviarCodigoVerificacion({
     required BuildContext context,
     required Map<String, dynamic> userData,
@@ -52,10 +68,16 @@ class AuthService {
         verificationCompleted: (PhoneAuthCredential cred) async {
           await _auth.signInWithCredential(cred);
           await insertarUsuarioMySQL(userData);
-          if (context.mounted)
+          if (context.mounted) {
             Navigator.pushReplacementNamed(context, '/mapa_pasajero');
+          }
         },
-        verificationFailed: (e) => debugPrint("❌ Error SMS: ${e.code}"),
+        verificationFailed: (e) {
+          debugPrint("❌ Error SMS Firebase: ${e.code}");
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error SMS: ${e.message}")));
+        },
         codeSent: (id, token) {
           Navigator.pushNamed(
             context,
@@ -70,31 +92,33 @@ class AuthService {
     }
   }
 
+  // --- INSERTAR EN MYSQL (INFINITYFREE) ---
   Future<bool> insertarUsuarioMySQL(Map<String, dynamic> datos) async {
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/registro.php"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(datos),
-      );
-      return response.statusCode == 200;
+      final response = await http
+          .post(
+            Uri.parse("${ApiConfig.baseUrl}/registro.php"),
+            headers: _headers,
+            body: jsonEncode(datos),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200 && !response.body.contains("<html>")) {
+        final data = jsonDecode(response.body);
+        return data['status'] == 'success';
+      }
+      return false;
     } catch (e) {
+      debugPrint("Error MySQL: $e");
       return false;
     }
   }
 
-  // --- GOOGLE SIGN IN (Modificado para Registro/Login) ---
+  // --- GOOGLE SIGN IN ---
   Future<UserCredential?> signInWithGoogle(BuildContext context) async {
     try {
-      final GoogleSignIn googleSignIn = kIsWeb
-          ? GoogleSignIn(
-              clientId:
-                  "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
-            )
-          : GoogleSignIn();
-
-      await googleSignIn.signOut(); // Limpia caché para elegir cuenta nueva
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      await _googleSignIn.signOut(); // Limpiar caché
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) return null;
 
@@ -111,10 +135,9 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
-        // 1. Sincronizamos con XAMPP (auth_google.php se encarga de ver si existe o crearlo)
-        await _sincronizarConXampp(user);
+        // Sincronización con el servidor
+        await _sincronizarConServidor(user);
 
-        // 2. Navegación limpia
         if (context.mounted) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -134,30 +157,37 @@ class AuthService {
       return userCredential;
     } catch (e) {
       debugPrint("Error Google: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error al iniciar con Google: $e")),
+        );
+      }
       return null;
     }
   }
 
-  Future<void> _sincronizarConXampp(User user) async {
+  // --- SINCRONIZACIÓN GOOGLE A MYSQL ---
+  Future<void> _sincronizarConServidor(User user) async {
     try {
       await http
           .post(
             Uri.parse('${ApiConfig.baseUrl}/auth_google.php'),
-            headers: {"Content-Type": "application/json"},
+            headers: _headers,
             body: jsonEncode({
               "nombre": user.displayName ?? "Usuario Google",
               "email": user.email,
               "google_id": user.uid,
             }),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
-      debugPrint("Error sincronización XAMPP: $e");
+      debugPrint("Error sincronización servidor: $e");
     }
   }
 
-  Future<void> logout() async {
+  // --- CERRAR SESIÓN ---
+  Future<void> signOut() async {
     await _auth.signOut();
-    await GoogleSignIn().signOut();
+    await _googleSignIn.signOut();
   }
 }
