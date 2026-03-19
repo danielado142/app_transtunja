@@ -1,477 +1,283 @@
 import 'package:flutter/material.dart';
-import '../../services/ruta_service.dart';
-import 'ver_ruta.dart';
-import 'editar_ruta.dart';
 
-enum FiltroRutas { todas, activas, eliminadas }
+import 'package:app_transtunja/screens/administrador/editar_ruta.dart';
+import 'package:app_transtunja/screens/administrador/ver_ruta.dart';
+import 'package:app_transtunja/services/ruta_service.dart';
 
 class HistorialRutas extends StatefulWidget {
-  const HistorialRutas({super.key});
+  const HistorialRutas({super.key, this.apiBaseUrl = '/transtunja'});
+
+  final String apiBaseUrl;
 
   @override
   State<HistorialRutas> createState() => _HistorialRutasState();
 }
 
 class _HistorialRutasState extends State<HistorialRutas> {
-  List<Map<String, dynamic>> rutas = [];
-  bool cargando = true;
-  FiltroRutas filtro = FiltroRutas.todas;
+  late final RutaService _rutaService;
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  bool _isLoading = true;
+  String? _busyRouteId;
+
+  List<RouteListItem> _routes = [];
 
   @override
   void initState() {
     super.initState();
-    cargarRutas();
-  }
+    _rutaService = RutaService(baseUrl: widget.apiBaseUrl);
+    _loadRoutes();
 
-  Future<void> cargarRutas() async {
-    setState(() {
-      cargando = true;
-    });
-
-    final datos = await RutaService.obtenerRutas();
-
-    setState(() {
-      rutas = datos;
-      cargando = false;
+    _searchCtrl.addListener(() {
+      setState(() {});
     });
   }
 
-  bool esActiva(Map<String, dynamic> ruta) {
-    final estado = (ruta['estado'] ?? 'activo').toString().trim().toLowerCase();
-    return estado == 'activo';
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
-  String textoEstado(Map<String, dynamic> ruta) {
-    return esActiva(ruta) ? 'Activa' : 'Eliminada';
-  }
-
-  Color colorEstado(Map<String, dynamic> ruta) {
-    return esActiva(ruta) ? Colors.green : Colors.red;
-  }
-
-  List<Map<String, dynamic>> get rutasFiltradas {
-    switch (filtro) {
-      case FiltroRutas.activas:
-        return rutas.where((r) => esActiva(r)).toList();
-      case FiltroRutas.eliminadas:
-        return rutas.where((r) => !esActiva(r)).toList();
-      case FiltroRutas.todas:
-        return rutas;
-    }
-  }
-
-  Map<String, String> extraerOrigenDestino(Map<String, dynamic> ruta) {
-    final nombre = (ruta['nombre'] ?? '').toString().trim();
-    final destinoBd = (ruta['destino'] ?? '').toString().trim();
-
-    if (nombre.contains(' - ')) {
-      final partes = nombre.split(' - ');
-      final origen = partes.first.trim();
-      final destino = destinoBd.isNotEmpty ? destinoBd : partes.last.trim();
-
-      return {'origen': origen, 'destino': destino};
+  Future<void> _loadRoutes({bool showLoader = true}) async {
+    if (showLoader) {
+      setState(() {
+        _isLoading = true;
+      });
     }
 
-    return {
-      'origen': 'No definido',
-      'destino': destinoBd.isNotEmpty ? destinoBd : 'No definido',
-    };
-  }
+    try {
+      final routes = await _rutaService.fetchRoutes();
 
-  bool tieneCoordenadas(Map<String, dynamic> ruta) {
-    final c = (ruta['coordenadas'] ?? '').toString().trim();
-    return c.isNotEmpty && c.toLowerCase() != 'null' && c != '[]';
-  }
+      if (!mounted) return;
 
-  Future<void> cambiarEstado(Map<String, dynamic> ruta) async {
-    final activa = esActiva(ruta);
-    final idRuta = (ruta['id_ruta'] ?? '').toString();
+      setState(() {
+        _routes = routes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
 
-    if (idRuta.isEmpty) {
+      setState(() {
+        _isLoading = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La ruta no tiene id_ruta válido')),
-      );
-      return;
-    }
-
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(
-          activa
-              ? '¿Desea deshabilitar esta ruta?'
-              : '¿Desea habilitar esta ruta?',
+        SnackBar(
+          content: Text('Error cargando historial: $e'),
+          backgroundColor: Colors.red,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      );
+    }
+  }
+
+  List<RouteListItem> get _filteredRoutes {
+    final query = _searchCtrl.text.trim().toLowerCase();
+
+    if (query.isEmpty) return _routes;
+
+    return _routes.where((route) {
+      return route.routeId.toLowerCase().contains(query) ||
+          route.nombre.toLowerCase().contains(query) ||
+          route.destino.toLowerCase().contains(query);
+    }).toList();
+  }
+
+  Future<void> _toggleStatus(RouteListItem route) async {
+    setState(() {
+      _busyRouteId = route.routeId;
+    });
+
+    try {
+      final response = await _rutaService.toggleRouteStatus(
+        routeId: route.routeId,
+        enabled: !route.habilitada,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            response['message']?.toString() ??
+                (!route.habilitada
+                    ? 'Ruta habilitada correctamente'
+                    : 'Ruta deshabilitada correctamente'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(activa ? 'Deshabilitar' : 'Habilitar'),
-          ),
-        ],
-      ),
+        ),
+      );
+
+      await _loadRoutes(showLoader: false);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo cambiar el estado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _busyRouteId = null;
+      });
+    }
+  }
+
+  Future<void> _openEdit(RouteListItem route) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditarRuta(routeId: route.routeId)),
     );
 
-    if (confirmado != true) return;
-
-    final resp = activa
-        ? await RutaService.deshabilitarRuta(idRuta)
-        : await RutaService.habilitarRuta(idRuta);
-
-    if (resp['success'] == true) {
-      await cargarRutas();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            activa
-                ? 'Ruta deshabilitada correctamente'
-                : 'Ruta habilitada correctamente',
-          ),
-        ),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            resp['mensaje']?.toString() ?? 'Error al cambiar el estado',
-          ),
-        ),
-      );
+    if (result == true) {
+      await _loadRoutes(showLoader: false);
     }
   }
 
-  Widget chipFiltro(String texto, bool activo, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-        decoration: BoxDecoration(
-          color: activo ? Colors.redAccent : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black12),
+  void _openView(RouteListItem route) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VerRuta(coordenadas: route.coordenadas),
+      ),
+    );
+  }
+
+  Widget _buildSearch() {
+    return TextField(
+      controller: _searchCtrl,
+      decoration: const InputDecoration(
+        labelText: 'Buscar por ID, nombre o destino',
+        prefixIcon: Icon(Icons.search),
+        border: OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildCard(RouteListItem route) {
+    final isBusy = _busyRouteId == route.routeId;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      route.nombre.isEmpty ? 'Sin nombre' : route.nombre,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      '${route.destino.isEmpty ? 'Sin destino' : route.destino}\nID: ${route.routeId}',
+                    ),
+                    isThreeLine: true,
+                  ),
+                ),
+                Chip(label: Text(route.habilitada ? 'Activa' : 'Inactiva')),
+              ],
+            ),
+            if (route.fecha != null && route.fecha!.trim().isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Fecha: ${route.fecha}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openView(route),
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Ver'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openEdit(route),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Editar'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isBusy ? null : () => _toggleStatus(route),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: route.habilitada
+                      ? Colors.orange
+                      : Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                icon: isBusy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Icon(route.habilitada ? Icons.block : Icons.check_circle),
+                label: Text(route.habilitada ? 'Deshabilitar' : 'Habilitar'),
+              ),
+            ),
+          ],
         ),
-        child: Text(
-          texto,
-          style: TextStyle(
-            fontSize: 12,
-            color: activo ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    final routes = _filteredRoutes;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (routes.isEmpty) {
+      return const Center(child: Text('No hay rutas disponibles.'));
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadRoutes,
+      child: ListView.separated(
+        itemCount: routes.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (_, index) => _buildCard(routes[index]),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final lista = rutasFiltradas;
-
     return Scaffold(
-      backgroundColor: const Color(0xffefefef),
-      appBar: AppBar(
-        backgroundColor: Colors.red,
-        title: const Text(
-          'HISTORIAL DE RUTAS',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      appBar: AppBar(title: const Text('Historial de rutas')),
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            _buildSearch(),
+            const SizedBox(height: 12),
+            Expanded(child: _buildContent()),
+          ],
         ),
-        leading: const BackButton(color: Colors.white),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              backgroundColor: Colors.blueGrey,
-              radius: 16,
-              child: const Text(
-                'AU',
-                style: TextStyle(fontSize: 11, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
       ),
-      body: cargando
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xffe8e8e8),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      chipFiltro('Todas', filtro == FiltroRutas.todas, () {
-                        setState(() {
-                          filtro = FiltroRutas.todas;
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      chipFiltro('Activas', filtro == FiltroRutas.activas, () {
-                        setState(() {
-                          filtro = FiltroRutas.activas;
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      chipFiltro(
-                        'Eliminadas',
-                        filtro == FiltroRutas.eliminadas,
-                        () {
-                          setState(() {
-                            filtro = FiltroRutas.eliminadas;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: lista.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No hay rutas registradas',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: lista.length,
-                          itemBuilder: (context, index) {
-                            final ruta = lista[index];
-                            final activa = esActiva(ruta);
-                            final od = extraerOrigenDestino(ruta);
-                            final nombre = (ruta['nombre'] ?? 'Ruta')
-                                .toString();
-
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 5,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          nombre,
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: colorEstado(ruta),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          textoEstado(ruta),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Código: ${(ruta['id_ruta'] ?? '').toString()}',
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Origen: ${od['origen']}',
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Destino: ${od['destino']}',
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-                                  if (!activa) ...[
-                                    const SizedBox(height: 10),
-                                    const Text(
-                                      'Ruta deshabilitada por el administrador.',
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 14),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: activa
-                                                ? Colors.blue
-                                                : Colors.grey,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                          ),
-                                          onPressed:
-                                              activa && tieneCoordenadas(ruta)
-                                              ? () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => VerRuta(
-                                                        coordenadas:
-                                                            (ruta['coordenadas'] ??
-                                                                    '')
-                                                                .toString(),
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.map),
-                                          label: const Text('Ver Ruta'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: activa
-                                                ? Colors.orange
-                                                : Colors.grey,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                          ),
-                                          onPressed: activa
-                                              ? () async {
-                                                  final actualizado =
-                                                      await Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              EditarRuta(
-                                                                ruta: ruta,
-                                                              ),
-                                                        ),
-                                                      );
-
-                                                  if (actualizado == true) {
-                                                    await cargarRutas();
-                                                  }
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.edit),
-                                          label: const Text('Editar'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: activa
-                                                ? Colors.red
-                                                : Colors.green,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                          ),
-                                          onPressed: () => cambiarEstado(ruta),
-                                          icon: Icon(
-                                            activa
-                                                ? Icons.block
-                                                : Icons.check_circle,
-                                          ),
-                                          label: Text(
-                                            activa
-                                                ? 'Deshabilitar'
-                                                : 'Habilitar',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Center(
-                                    child: SizedBox(
-                                      width: 150,
-                                      height: 30,
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.blue,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
-                                          ),
-                                        ),
-                                        onPressed:
-                                            activa && tieneCoordenadas(ruta)
-                                            ? () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) => VerRuta(
-                                                      coordenadas:
-                                                          (ruta['coordenadas'] ??
-                                                                  '')
-                                                              .toString(),
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            : null,
-                                        child: const Text(
-                                          'Ver detalles...',
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
     );
   }
 }

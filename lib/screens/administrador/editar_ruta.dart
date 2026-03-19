@@ -1,585 +1,546 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
-import '../../services/ruta_service.dart';
+
+import 'package:app_transtunja/services/routing_service.dart';
+import 'package:app_transtunja/services/ruta_service.dart';
 
 class EditarRuta extends StatefulWidget {
-  final Map<String, dynamic> ruta;
+  const EditarRuta({
+    super.key,
+    required this.routeId,
+    this.apiBaseUrl = '/transtunja',
+  });
 
-  const EditarRuta({super.key, required this.ruta});
+  final String routeId;
+  final String apiBaseUrl;
 
   @override
   State<EditarRuta> createState() => _EditarRutaState();
 }
 
 class _EditarRutaState extends State<EditarRuta> {
-  late TextEditingController nombreCtrl;
-  late TextEditingController destinoCtrl;
+  final MapController _mapController = MapController();
+  final TextEditingController _nombreCtrl = TextEditingController();
+  final TextEditingController _destinoCtrl = TextEditingController();
 
-  List<LatLng> puntos = [];
-  List<LatLng> puntosOriginales = [];
+  late final RutaService _rutaService;
+  late final RoutingService _routingService;
 
-  late String nombreOriginal;
-  late String destinoOriginal;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  bool _isRouting = false;
 
-  bool guardando = false;
+  String _originalNombre = '';
+  String _originalDestino = '';
+  List<LatLng> _originalWaypoints = [];
+  List<LatLng> _originalPolyline = [];
+
+  List<LatLng> _waypoints = [];
+  List<LatLng> _polylinePoints = [];
+
+  int? _selectedMarkerIndex;
+  final List<String> _history = [];
+
+  Timer? _routeDebounce;
+  int _routeRequestId = 0;
+
+  static const LatLng _tunjaCenter = LatLng(5.5353, -73.3678);
 
   @override
   void initState() {
     super.initState();
-
-    guardando = false;
-
-    nombreOriginal = (widget.ruta['nombre'] ?? '').toString();
-    destinoOriginal = (widget.ruta['destino'] ?? '').toString();
-
-    nombreCtrl = TextEditingController(text: nombreOriginal);
-    destinoCtrl = TextEditingController(text: destinoOriginal);
-
-    puntos = _parsearCoordenadas((widget.ruta['coordenadas'] ?? '').toString());
-    puntosOriginales = List<LatLng>.from(puntos);
+    _rutaService = RutaService(baseUrl: widget.apiBaseUrl);
+    _routingService = RoutingService();
+    _loadRoute();
   }
 
   @override
   void dispose() {
-    nombreCtrl.dispose();
-    destinoCtrl.dispose();
+    _routeDebounce?.cancel();
+    _nombreCtrl.dispose();
+    _destinoCtrl.dispose();
     super.dispose();
   }
 
-  List<LatLng> _parsearCoordenadas(String raw) {
-    final texto = raw.trim();
-
-    if (texto.isEmpty || texto.toLowerCase() == 'null' || texto == '[]') {
-      return [];
-    }
-
+  Future<void> _loadRoute() async {
     try {
-      final decoded = jsonDecode(texto);
-      if (decoded is List) {
-        return decoded
-            .whereType<List>()
-            .where((e) => e.length >= 2)
-            .map(
-              (e) => LatLng(
-                double.parse(e[0].toString()),
-                double.parse(e[1].toString()),
-              ),
-            )
-            .toList();
-      }
-    } catch (_) {}
+      final route = await _rutaService.fetchRouteById(widget.routeId);
 
-    final regexLatLng = RegExp(
-      r'LatLng\(latitude:\s*(-?\d+(?:\.\d+)?),\s*longitude:\s*(-?\d+(?:\.\d+)?)\)',
-    );
-    final matchesLatLng = regexLatLng.allMatches(texto);
+      _originalNombre = route.nombre;
+      _originalDestino = route.destino;
+      _originalWaypoints = List<LatLng>.from(route.waypoints);
+      _originalPolyline = List<LatLng>.from(route.polylinePoints);
 
-    if (matchesLatLng.isNotEmpty) {
-      return matchesLatLng
-          .map(
-            (m) => LatLng(double.parse(m.group(1)!), double.parse(m.group(2)!)),
-          )
-          .toList();
-    }
-
-    final regexPar = RegExp(
-      r'\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]',
-    );
-    final matchesPar = regexPar.allMatches(texto);
-
-    return matchesPar
-        .map(
-          (m) => LatLng(double.parse(m.group(1)!), double.parse(m.group(2)!)),
-        )
-        .toList();
-  }
-
-  String _serializarPuntos() {
-    final lista = puntos.map((p) => [p.latitude, p.longitude]).toList();
-    return jsonEncode(lista);
-  }
-
-  void _agregarPunto(LatLng point) {
-    setState(() {
-      puntos.add(point);
-    });
-  }
-
-  void _eliminarPuntoCercano(LatLng point) {
-    if (puntos.isEmpty) return;
-
-    int indice = 0;
-    double mejor = _distanciaCuadrada(puntos[0], point);
-
-    for (int i = 1; i < puntos.length; i++) {
-      final d = _distanciaCuadrada(puntos[i], point);
-      if (d < mejor) {
-        mejor = d;
-        indice = i;
-      }
-    }
-
-    setState(() {
-      puntos.removeAt(indice);
-    });
-  }
-
-  double _distanciaCuadrada(LatLng a, LatLng b) {
-    final dx = a.latitude - b.latitude;
-    final dy = a.longitude - b.longitude;
-    return dx * dx + dy * dy;
-  }
-
-  Future<void> _mostrarDialogoExito(
-    String mensaje, {
-    bool cerrarPantalla = false,
-  }) async {
-    if (!mounted) return;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.green,
-                child: Icon(Icons.check, color: Colors.white, size: 34),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Éxito',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                mensaje,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 140,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    if (cerrarPantalla) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _mostrarDialogoError(String mensaje) async {
-    if (!mounted) return;
-
-    await showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.red,
-                child: Icon(Icons.close, color: Colors.white, size: 34),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Error',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                mensaje,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 140,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    'Cerrar',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _restablecerRuta() async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Colors.white,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '¿Está seguro de restablecer esta ruta?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text(
-                        'NO',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
-                        'SI',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (confirmado == true) {
-      setState(() {
-        nombreCtrl.text = nombreOriginal;
-        destinoCtrl.text = destinoOriginal;
-        puntos = List<LatLng>.from(puntosOriginales);
-      });
-
-      await _mostrarDialogoExito('Se guardó exitosamente');
-    }
-  }
-
-  Future<void> _guardarCambios() async {
-    final idRuta = (widget.ruta['id_ruta'] ?? '').toString().trim();
-    final nombre = nombreCtrl.text.trim();
-    final destino = destinoCtrl.text.trim();
-
-    if (idRuta.isEmpty) {
-      await _mostrarDialogoError('La ruta no tiene id_ruta válido');
-      return;
-    }
-
-    if (nombre.isEmpty || destino.isEmpty) {
-      await _mostrarDialogoError('Completa nombre y destino');
-      return;
-    }
-
-    if (puntos.isEmpty) {
-      await _mostrarDialogoError('La ruta debe tener al menos un punto');
-      return;
-    }
-
-    setState(() {
-      guardando = true;
-    });
-
-    try {
-      final resp = await RutaService.actualizarRuta(
-        idRuta,
-        nombre,
-        destino,
-        _serializarPuntos(),
-      );
+      _nombreCtrl.text = route.nombre;
+      _destinoCtrl.text = route.destino;
+      _waypoints = List<LatLng>.from(route.waypoints);
+      _polylinePoints = List<LatLng>.from(route.polylinePoints);
 
       if (!mounted) return;
 
-      if (resp['success'] == true) {
-        setState(() {
-          guardando = false;
-        });
+      _pushHistory('Ruta cargada desde base de datos');
 
-        await _mostrarDialogoExito(
-          'Se guardó exitosamente',
-          cerrarPantalla: true,
-        );
-      } else {
-        setState(() {
-          guardando = false;
-        });
+      setState(() {
+        _isLoading = false;
+      });
 
-        await _mostrarDialogoError(
-          resp['mensaje']?.toString() ?? 'Error al actualizar la ruta',
-        );
+      if (_waypoints.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _mapController.move(_waypoints.first, 14.8);
+        });
       }
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        guardando = false;
+        _isLoading = false;
       });
 
-      await _mostrarDialogoError('Error de conexión: $e');
+      _showSnack('Error cargando la ruta: $e', isError: true);
     }
+  }
+
+  void _pushHistory(String text) {
+    final now = TimeOfDay.now().format(context);
+    _history.insert(0, '$now · $text');
+    if (_history.length > 8) {
+      _history.removeLast();
+    }
+  }
+
+  void _showSnack(String text, {bool isError = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: isError ? Colors.red : null,
+      ),
+    );
+  }
+
+  Future<void> _handleMapTap(LatLng tappedPoint) async {
+    if (_isSaving) return;
+
+    if (_selectedMarkerIndex != null) {
+      await _moveSelectedMarker(tappedPoint);
+      return;
+    }
+
+    await _addPoint(tappedPoint);
+  }
+
+  Future<void> _addPoint(LatLng point) async {
+    try {
+      final snapped = await _routingService.snapPointToRoad(point);
+
+      if (!mounted) return;
+
+      setState(() {
+        _waypoints.add(snapped);
+        _pushHistory('Punto ${_waypoints.length} agregado');
+      });
+
+      _scheduleRouteRebuild();
+    } catch (e) {
+      _showSnack('No se pudo agregar el punto: $e', isError: true);
+    }
+  }
+
+  Future<void> _moveSelectedMarker(LatLng point) async {
+    final index = _selectedMarkerIndex;
+    if (index == null) return;
+
+    try {
+      final snapped = await _routingService.snapPointToRoad(point);
+
+      if (!mounted) return;
+
+      setState(() {
+        _waypoints[index] = snapped;
+        _selectedMarkerIndex = null;
+        _pushHistory('Marcador ${index + 1} movido');
+      });
+
+      _scheduleRouteRebuild();
+    } catch (e) {
+      _showSnack('No se pudo mover el marcador: $e', isError: true);
+    }
+  }
+
+  void _removePoint(int index) {
+    if (_waypoints.length <= 2) {
+      _showSnack('La ruta debe tener al menos 2 puntos.', isError: true);
+      return;
+    }
+
+    setState(() {
+      _waypoints.removeAt(index);
+      _selectedMarkerIndex = null;
+      _pushHistory('Marcador ${index + 1} eliminado');
+    });
+
+    _scheduleRouteRebuild();
+  }
+
+  void _scheduleRouteRebuild() {
+    _routeDebounce?.cancel();
+    _routeDebounce = Timer(const Duration(milliseconds: 500), _rebuildPolyline);
+  }
+
+  Future<void> _rebuildPolyline() async {
+    if (_waypoints.length < 2) {
+      if (!mounted) return;
+      setState(() {
+        _polylinePoints = List<LatLng>.from(_waypoints);
+      });
+      return;
+    }
+
+    final requestId = ++_routeRequestId;
+
+    setState(() {
+      _isRouting = true;
+    });
+
+    try {
+      final polyline = await _routingService.buildRoadPolyline(_waypoints);
+
+      if (!mounted || requestId != _routeRequestId) return;
+
+      setState(() {
+        _polylinePoints = polyline;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _routeRequestId) return;
+
+      setState(() {
+        _polylinePoints = List<LatLng>.from(_waypoints);
+      });
+
+      _showSnack(
+        'No se pudo ajustar la ruta a las calles. Se dejó la geometría manual.',
+        isError: true,
+      );
+    } finally {
+      if (!mounted || requestId != _routeRequestId) return;
+
+      setState(() {
+        _isRouting = false;
+      });
+    }
+  }
+
+  void _resetChanges() {
+    _routeDebounce?.cancel();
+
+    setState(() {
+      _nombreCtrl.text = _originalNombre;
+      _destinoCtrl.text = _originalDestino;
+      _waypoints = List<LatLng>.from(_originalWaypoints);
+      _polylinePoints = List<LatLng>.from(_originalPolyline);
+      _selectedMarkerIndex = null;
+      _pushHistory('Datos restaurados');
+    });
+
+    _showSnack('Los datos fueron restaurados.');
+  }
+
+  bool _validateBeforeSave() {
+    if (_nombreCtrl.text.trim().isEmpty || _destinoCtrl.text.trim().isEmpty) {
+      _showSnack('Nombre de ruta y destino son obligatorios.', isError: true);
+      return false;
+    }
+
+    if (_waypoints.length < 2) {
+      _showSnack('Debes tener al menos 2 puntos en el mapa.', isError: true);
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _saveChanges() async {
+    if (!_validateBeforeSave()) return;
+
+    _routeDebounce?.cancel();
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      if (_polylinePoints.length < 2) {
+        await _rebuildPolyline();
+      }
+
+      final resultado = await _rutaService.updateRoute(
+        routeId: widget.routeId,
+        nombre: _nombreCtrl.text,
+        destino: _destinoCtrl.text,
+        waypoints: _waypoints,
+        polylinePoints: _polylinePoints.length >= 2
+            ? _polylinePoints
+            : _waypoints,
+      );
+
+      if (!mounted) return;
+
+      if (resultado['success'] == true || resultado['ok'] == true) {
+        _showSnack('Ruta actualizada correctamente.');
+        Navigator.pop(context, true);
+      } else {
+        _showSnack(
+          resultado['message']?.toString() ?? 'No se pudo actualizar la ruta.',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('No se pudo guardar: $e', isError: true);
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  Widget _buildTopForm() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _nombreCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nombre de la ruta',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _destinoCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Destino',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Chip(
+                label: Text('Puntos: ${_waypoints.length}'),
+                avatar: const Icon(Icons.alt_route, size: 18),
+              ),
+              Chip(
+                label: Text(
+                  _selectedMarkerIndex == null
+                      ? 'Modo: agregar'
+                      : 'Mover marcador ${_selectedMarkerIndex! + 1}',
+                ),
+                avatar: const Icon(Icons.edit_location_alt, size: 18),
+              ),
+              Chip(
+                label: Text(_isRouting ? 'Ajustando a vías...' : 'Ruta lista'),
+                avatar: Icon(
+                  _isRouting ? Icons.sync : Icons.check_circle,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Toca el mapa para agregar un punto. '
+              'Toca un marcador y luego el mapa para moverlo. '
+              'Mantén presionado un marcador para eliminarlo.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMap() {
+    final initialCenter = _waypoints.isNotEmpty
+        ? _waypoints.first
+        : _tunjaCenter;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: FlutterMap(
+        mapController: _mapController,
+        options: MapOptions(
+          initialCenter: initialCenter,
+          initialZoom: 14.5,
+          onTap: (_, point) => _handleMapTap(point),
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.transtunja.admin',
+            tileProvider: CancellableNetworkTileProvider(),
+          ),
+          if (_polylinePoints.length >= 2)
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: _polylinePoints,
+                  strokeWidth: 5.0,
+                  color: Colors.red,
+                ),
+              ],
+            ),
+          MarkerLayer(
+            markers: List.generate(_waypoints.length, (index) {
+              final isSelected = _selectedMarkerIndex == index;
+
+              return Marker(
+                point: _waypoints[index],
+                width: 44,
+                height: 44,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMarkerIndex = isSelected ? null : index;
+                      _pushHistory(
+                        isSelected
+                            ? 'Marcador ${index + 1} deseleccionado'
+                            : 'Marcador ${index + 1} seleccionado',
+                      );
+                    });
+                  },
+                  onLongPress: () => _removePoint(index),
+                  child: Icon(
+                    Icons.location_on,
+                    size: 40,
+                    color: isSelected ? Colors.amber : Colors.red,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryPanel() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 10,
+            color: Colors.black12,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.history),
+              SizedBox(width: 8),
+              Text(
+                'Historial de edición',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 110,
+            child: _history.isEmpty
+                ? const Center(child: Text('Sin cambios todavía'))
+                : ListView.builder(
+                    itemCount: _history.length,
+                    itemBuilder: (_, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text('• ${_history[index]}'),
+                      );
+                    },
+                  ),
+          ),
+          if (_isRouting)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: LinearProgressIndicator(),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isSaving ? null : _resetChanges,
+                  child: const Text('Restablecer'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveChanges,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Guardar cambios'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final centro = puntos.isNotEmpty
-        ? puntos.first
-        : const LatLng(5.5353, -73.3678);
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.red,
-        title: const Text(
-          'EDITAR RUTA',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        leading: const BackButton(color: Colors.white),
-      ),
-      backgroundColor: const Color(0xffefefef),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(title: const Text('Editar Ruta')),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
                 children: [
-                  Icon(Icons.edit, color: Colors.white),
-                  SizedBox(width: 10),
-                  Text(
-                    'Editar Rutas',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
+                  _buildTopForm(),
+                  const SizedBox(height: 12),
+                  Expanded(child: _buildMap()),
+                  const SizedBox(height: 12),
+                  _buildHistoryPanel(),
                 ],
               ),
             ),
-
-            const SizedBox(height: 14),
-
-            Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: nombreCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre de la ruta',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: destinoCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Destino',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: guardando ? null : _restablecerRuta,
-                            icon: const Icon(Icons.restore, color: Colors.blue),
-                            label: const Text(
-                              'Restablecer',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.blueGrey),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: guardando ? null : _guardarCambios,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              disabledBackgroundColor: Colors.grey.shade300,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            icon: guardando
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(Icons.save, color: Colors.white),
-                            label: Text(
-                              guardando ? 'Guardando...' : 'Guardar cambios',
-                              style: TextStyle(
-                                color: guardando ? Colors.white : Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: centro,
-                    initialZoom: 14,
-                    onTap: (tapPosition, point) {
-                      _agregarPunto(point);
-                    },
-                    onLongPress: (tapPosition, point) {
-                      _eliminarPuntoCercano(point);
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.app',
-                    ),
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: puntos,
-                          strokeWidth: 4,
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
-                    MarkerLayer(
-                      markers: puntos
-                          .map(
-                            (p) => Marker(
-                              point: p,
-                              width: 40,
-                              height: 40,
-                              child: const Icon(
-                                Icons.location_pin,
-                                color: Colors.red,
-                                size: 38,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
