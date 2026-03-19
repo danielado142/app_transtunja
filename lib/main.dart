@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-// --- TUS IMPORTS ---
+// --- TUS IMPORTS (Ahora en la carpeta 'login') ---
 import 'pantalla_bienvenida.dart';
-import 'package:app_transtunja/screens/usuario/login_screen.dart';
-import 'package:app_transtunja/screens/usuario/register_screen.dart';
-import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
-import 'package:app_transtunja/screens/usuario/verification_screen.dart';
+import 'package:app_transtunja/screens/login/login_screen.dart';
+import 'package:app_transtunja/screens/login/register_screen.dart';
+import 'package:app_transtunja/screens/login/role_selection_screen.dart';
+import 'package:app_transtunja/screens/login/verification_screen.dart';
 
-// --- IMPORTS DE TU COMPAÑERA ---
+// --- IMPORTS DE TU COMPAÑERA (Ella los dejó en la carpeta 'usuario') ---
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
+import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
+// Nota: Si el archivo principal de ella se llama distinto, cámbialo arriba.
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +47,7 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         final args = settings.arguments as Map<String, dynamic>? ?? {};
 
+        // Tus rutas de Login (Carpeta login)
         if (settings.name == '/role_selection') {
           return MaterialPageRoute(
             builder: (_) => RoleSelectionScreen(userData: args),
@@ -58,16 +61,24 @@ class MyApp extends StatelessWidget {
             ),
           );
         }
+        if (settings.name == '/login') {
+          return MaterialPageRoute(builder: (_) => const LoginScreen());
+        }
+        if (settings.name == '/register') {
+          return MaterialPageRoute(builder: (_) => const RegisterScreen());
+        }
+
+        // Ruta de la pantalla de ella (Carpeta usuario)
+        if (settings.name == '/home_usuario') {
+          return MaterialPageRoute(builder: (_) => const UserHomeScreen());
+        }
+
         if (settings.name == '/home_conductor') {
           return MaterialPageRoute(
             builder: (_) =>
                 HomeConductor(nombreConductor: args['nombre'] ?? "Conductor"),
           );
         }
-        if (settings.name == '/login')
-          return MaterialPageRoute(builder: (_) => const LoginScreen());
-        if (settings.name == '/register')
-          return MaterialPageRoute(builder: (_) => const RegisterScreen());
 
         return null;
       },

@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'package:app_transtunja/config/constants.dart';
-import 'package:app_transtunja/screens/usuario/role_selection_screen.dart';
+import 'package:app_transtunja/screens/login/role_selection_screen.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;

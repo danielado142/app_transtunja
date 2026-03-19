@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // ✅ Importaciones de configuración y servicios
 import 'package:app_transtunja/config/constants.dart';
 import 'package:app_transtunja/services/auth_service.dart';
-import 'package:app_transtunja/screens/usuario/verification_screen.dart';
+import 'package:app_transtunja/screens/login/verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Map<String, dynamic>? userData;

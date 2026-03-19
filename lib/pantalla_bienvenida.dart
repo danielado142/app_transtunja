@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // Importa tu pantalla de login para que el botón funcione
-import 'package:app_transtunja/screens/usuario/login_screen.dart';
+import 'package:app_transtunja/screens/login/login_screen.dart';
 
 class PantallaBienvenida extends StatelessWidget {
   const PantallaBienvenida({super.key});
