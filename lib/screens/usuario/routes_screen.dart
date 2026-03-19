@@ -18,17 +18,17 @@ class _RoutesScreenState extends State<RoutesScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
 
   final List<String> _filters = const [
-    "Todas",
-    "Centro",
-    "UPTC",
-    "Terminal",
-    "Unicentro",
+    'Todas',
+    'Centro',
+    'UPTC',
+    'Terminal',
+    'Unicentro',
   ];
 
   List<RouteModel> _routes = [];
   bool _isLoading = true;
-  String _selectedFilter = "Todas";
-  String _query = "";
+  String _selectedFilter = 'Todas';
+  String _query = '';
 
   @override
   void initState() {
@@ -63,16 +63,14 @@ class _RoutesScreenState extends State<RoutesScreen> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar rutas: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cargar rutas: $e')));
     }
   }
 
   List<RouteModel> get _filteredRoutes {
-    final filteredByTag = _selectedFilter == "Todas"
+    final filteredByTag = _selectedFilter == 'Todas'
         ? _routes
         : _routes.where((route) => route.tag == _selectedFilter).toList();
 
@@ -99,16 +97,14 @@ class _RoutesScreenState extends State<RoutesScreen> {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Rutas",
+          'Rutas',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       body: SafeArea(
         top: false,
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _loadRoutes,
                 child: CustomScrollView(
@@ -122,7 +118,7 @@ class _RoutesScreenState extends State<RoutesScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              "Encuentra tu ruta y revisa sus detalles.",
+                              'Encuentra tu ruta y revisa sus detalles.',
                               style: TextStyle(
                                 color: Colors.black54,
                                 fontSize: 13,
@@ -149,7 +145,7 @@ class _RoutesScreenState extends State<RoutesScreen> {
                                   });
                                 },
                                 decoration: InputDecoration(
-                                  hintText: "Buscar ruta o parada...",
+                                  hintText: 'Buscar ruta o parada...',
                                   prefixIcon: const Icon(Icons.search),
                                   suffixIcon: _query.isEmpty
                                       ? null
@@ -158,7 +154,7 @@ class _RoutesScreenState extends State<RoutesScreen> {
                                           onPressed: () {
                                             _searchCtrl.clear();
                                             setState(() {
-                                              _query = "";
+                                              _query = '';
                                             });
                                           },
                                         ),
@@ -213,7 +209,8 @@ class _RoutesScreenState extends State<RoutesScreen> {
                               ),
                             );
                           },
-                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 10),
                           itemCount: _filters.length,
                         ),
                       ),
@@ -222,7 +219,7 @@ class _RoutesScreenState extends State<RoutesScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
                         child: Text(
-                          "Resultados: ${filtered.length}",
+                          'Resultados: ${filtered.length}',
                           style: const TextStyle(
                             color: Colors.black54,
                             fontWeight: FontWeight.w700,
@@ -239,16 +236,13 @@ class _RoutesScreenState extends State<RoutesScreen> {
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final route = filtered[index];
-
-                              return _RouteCard(
-                                route: route,
-                              );
-                            },
-                            childCount: filtered.length,
-                          ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final route = filtered[index];
+                            return _RouteCard(route: route);
+                          }, childCount: filtered.length),
                         ),
                       ),
                   ],
@@ -264,9 +258,7 @@ class _RouteCard extends StatelessWidget {
 
   final RouteModel route;
 
-  const _RouteCard({
-    required this.route,
-  });
+  const _RouteCard({required this.route});
 
   @override
   Widget build(BuildContext context) {
@@ -316,9 +308,7 @@ class _RouteCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      destination.isEmpty
-                          ? origin
-                          : '$origin  →  $destination',
+                      destination.isEmpty ? origin : '$origin  →  $destination',
                       style: const TextStyle(
                         color: Colors.black54,
                         fontWeight: FontWeight.w600,
@@ -368,7 +358,7 @@ class _RouteCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "Próxima parada: ${route.stop}",
+            'Próxima parada: ${route.stop}',
             style: const TextStyle(color: Colors.black54, fontSize: 14),
           ),
           const SizedBox(height: 14),
@@ -397,7 +387,7 @@ class _RouteCard extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                "Ver detalles",
+                'Ver detalles',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -456,12 +446,12 @@ class _EmptyRoutesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(Icons.alt_route, size: 46, color: Colors.black38),
             SizedBox(height: 12),
             Text(
