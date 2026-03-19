@@ -1,5 +1,4 @@
 <?php
-// 1. Desactivar la salida de errores en HTML para que no rompa Flutter
 error_reporting(0);
 ini_set('display_errors', 0); 
 header('Content-Type: application/json; charset=utf-8');
@@ -9,14 +8,12 @@ include 'conexion.php';
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-// Respuesta por defecto
 $response = ["status" => "error", "message" => "Ocurrió un error inesperado"];
 
-if(isset($data['correo']) && isset($data['contrasena'])) {
+// --- CASO 1: LOGIN CON GOOGLE (Sin contraseña) ---
+if(isset($data['correo']) && !isset($data['contrasena'])) {
     $correo = $data['correo'];
-    $contrasena_ingresada = $data['contrasena'];
 
-    // CAMBIO CLAVE: Solo buscamos por correo para traer la contraseña encriptada
     $stmt = $conexion->prepare("SELECT * FROM usuario WHERE correo = ?");
     $stmt->bind_param("s", $correo);
     $stmt->execute();
@@ -24,10 +21,35 @@ if(isset($data['correo']) && isset($data['contrasena'])) {
 
     if ($resultado->num_rows > 0) {
         $usuario = $resultado->fetch_assoc();
-        $hash_en_bd = $usuario['contrasena']; // Esta es la clave encriptada
+        $response = [
+            "status" => "success",
+            "message" => "¡Bienvenido con Google!",
+            "userData" => $usuario
+        ];
+    } else {
+        // El usuario entró con Google pero no existe en tu MySQL de XAMPP
+        $response = [
+            "status" => "new_user", 
+            "message" => "Usuario de Google no encontrado en la base de datos local"
+        ];
+    }
+} 
+// --- CASO 2: LOGIN TRADICIONAL (Con correo y contraseña) ---
+else if(isset($data['correo']) && isset($data['contrasena'])) {
+    $correo = $data['correo'];
+    $contrasena_ingresada = $data['contrasena'];
 
-        // VERIFICACIÓN DE SEGURIDAD
-        if (password_verify($contrasena_ingresada, $hash_en_bd)) {
+    $stmt = $conexion->prepare("SELECT * FROM usuario WHERE correo = ?");
+    $stmt->bind_param("s", $correo);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+
+    if ($resultado->num_rows > 0) {
+        $usuario = $resultado->fetch_assoc();
+        $contrasena_en_bd = $usuario['contrasena'];
+
+        // Verificación compatible con texto plano y hash
+        if ($contrasena_ingresada === $contrasena_en_bd || password_verify($contrasena_ingresada, $contrasena_en_bd)) {
             $response = [
                 "status" => "success",
                 "message" => "¡Bienvenido!",
@@ -41,7 +63,6 @@ if(isset($data['correo']) && isset($data['contrasena'])) {
     }
 }
 
-// 2. Asegurarte de que SOLO se imprima el JSON
 echo json_encode($response);
 exit; 
-?>
+?>  
