@@ -138,7 +138,6 @@ class RouteDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Align(
@@ -150,7 +149,6 @@ class RouteDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -169,7 +167,6 @@ class RouteDetailScreen extends StatelessWidget {
                 },
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: SizedBox(
