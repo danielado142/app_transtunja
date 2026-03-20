@@ -3,10 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:app_transtunja/config/constants.dart';
-
-// IMPORTS DE LAS DOS INTERFACES
+// IMPORTANTE: Esta es la conexión con el archivo de tu compañera
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
-import 'package:app_transtunja/screens/usuario/user_home_screen.dart'; // <--- Nueva conexión
 
 class SmsVerificationScreen extends StatefulWidget {
   final String verificationId;
@@ -30,12 +28,7 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   bool _isLoading = false;
 
   void _mostrarAlertaExito() {
-    // Detectamos el rol del usuario para personalizar el mensaje
-    String rol = widget.userData['rol'] ?? 'usuario';
-    String mensaje = rol == 'conductor'
-        ? "Acceso validado. Presiona aceptar para entrar al panel de conductor."
-        : "Acceso validado. Presiona aceptar para ver las rutas y el mapa.";
-
+    print("DEBUG: ABRIENDO DIALOGO");
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -45,35 +38,31 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           title: const Text("Código Correcto", textAlign: TextAlign.center),
-          content: Text(mensaje),
+          content: const Text(
+            "Acceso validado. Presiona aceptar para entrar al panel de conductor.",
+          ),
           actions: [
             Center(
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(dialogContext).pop(); // Cierra alerta
+                  print(">>> NAVEGANDO A INTERFAZ CONDUCTOR <<<");
 
-                  // --- LÓGICA DE REDIRECCIÓN SEGÚN ROL ---
-                  if (rol == 'conductor') {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => HomeConductor(
-                          nombreConductor:
-                              widget.userData['nombres'] ?? 'Conductor',
-                        ),
+                  // 1. Cerramos la alerta
+                  Navigator.of(dialogContext).pop();
+
+                  // 2. Navegamos a HomeConductor usando MaterialPageRoute
+                  // Esto asegura que entres a la interfaz que me pasaste
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HomeConductor(
+                        nombreConductor:
+                            widget.userData['nombres'] ?? 'Conductor',
                       ),
-                      (route) => false,
-                    );
-                  } else {
-                    // SI ES USUARIO, VA A LA INTERFAZ QUE ME PASASTE
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserHomeScreen(),
-                      ),
-                      (route) => false,
-                    );
-                  }
+                    ),
+                    (route) =>
+                        false, // No permite volver atrás a la verificación
+                  );
                 },
                 child: const Text(
                   "ACEPTAR",
@@ -91,20 +80,20 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     );
   }
 
-  // ... (El resto del método _verificarCodigo y build se mantienen igual)
   Future<void> _verificarCodigo() async {
     String smsCode = _controllers.map((c) => c.text).join();
     if (smsCode.length < 6) return;
     setState(() => _isLoading = true);
 
     try {
+      // Verificación con Firebase
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: widget.verificationId,
         smsCode: smsCode,
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Guardar en XAMPP (Tu base de datos)
+      // Guardar en tu base de datos XAMPP
       try {
         await http.post(
           Uri.parse('${ApiConfig.baseUrl}/registro.php'),
@@ -112,7 +101,7 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
           body: jsonEncode(widget.userData),
         );
       } catch (e) {
-        debugPrint("Error XAMPP: $e");
+        print("Error XAMPP: $e");
       }
 
       if (!mounted) return;
@@ -128,7 +117,6 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // El build es el mismo que ya tienes, no se tocó nada visual
     return Scaffold(
       appBar: AppBar(
         title: const Text("Verificación de Seguridad"),

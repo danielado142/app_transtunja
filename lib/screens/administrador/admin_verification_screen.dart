@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// Asegúrate de que esta ruta sea la correcta para tu Dashboard
+import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
 
 class AdminVerificationScreen extends StatefulWidget {
   const AdminVerificationScreen({super.key});
@@ -9,10 +11,7 @@ class AdminVerificationScreen extends StatefulWidget {
 }
 
 class _AdminVerificationScreenState extends State<AdminVerificationScreen> {
-  // 1. Código secreto para la validación
   final String _codigoCorrecto = "123456";
-
-  // 2. Controladores y Nodos de enfoque
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   final List<TextEditingController> _controllers = List.generate(
     6,
@@ -21,63 +20,88 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen> {
 
   @override
   void dispose() {
-    for (var node in _focusNodes) {
-      node.dispose();
-    }
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
+    for (var node in _focusNodes) node.dispose();
+    for (var controller in _controllers) controller.dispose();
     super.dispose();
   }
 
-  // Método para validar el código
   void _validarCodigo() {
-    // Une el texto de los 6 controladores
     String codigoIngresado = _controllers.map((e) => e.text).join();
-
     if (codigoIngresado == _codigoCorrecto) {
-      // SI ES CORRECTO: Muestra alerta de éxito
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
-          content: const Text(
-            '¡Código Correcto!\nEres administrador.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18),
-          ),
-          actions: [
-            Center(
+      _mostrarAlertaExito();
+    } else {
+      _mostrarError();
+    }
+  }
+
+  void _mostrarAlertaExito() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFDF2F2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 15),
+            const Icon(Icons.shield, color: Colors.orange, size: 85),
+            const SizedBox(height: 25),
+            const Text(
+              '¡Acceso Confirmado!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Has ingresado como Administrador del sistema.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
               child: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // Aquí podrías usar: Navigator.pushReplacement(...) para ir al panel
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminDashboard(),
+                    ),
+                    (route) => false,
+                  );
                 },
-                child: const Text("Aceptar", style: TextStyle(fontSize: 16)),
+                child: const Text(
+                  "Aceptar",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
-      );
-    } else {
-      // SI ES INCORRECTO: Muestra SnackBar de error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Código incorrecto. Inténtalo de nuevo."),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      // Opcional: Limpiar casillas si falla
-      for (var controller in _controllers) {
-        controller.clear();
-      }
-      _focusNodes[0].requestFocus(); // Regresa al primer cuadrito
-    }
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Código administrativo incorrecto."),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    for (var controller in _controllers) controller.clear();
+    _focusNodes[0].requestFocus();
   }
 
   @override
@@ -88,49 +112,71 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 22,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          "Verificación Administrador", // CORREGIDO: Ahora dice Administrador
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 25.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 50),
+              const SizedBox(height: 40),
               const Text(
-                'Inserte código de verificación',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                'Seguridad Administrador', // CORREGIDO: Ahora dice Administrador
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               const Text(
                 'Ingresa el código de 6 dígitos para continuar',
-                style: TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-              const SizedBox(height: 40),
-              // Cajas para el código OTP
+              const SizedBox(height: 50),
+              // FILA DE CUADRITOS REDONDEADOS (DISEÑO ACTUALIZADO)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) => _buildOtpBox(index)),
               ),
-              const SizedBox(height: 40),
-              // Botón de verificar
-              ElevatedButton(
-                onPressed: _validarCodigo,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 80,
-                    vertical: 15,
+              const SizedBox(height: 60),
+              // BOTÓN ESTILO "CÁPSULA" EN COLOR ROJO (TU PEDIDO)
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _validarCodigo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red, // CORREGIDO: Botón Rojo
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                  child: const Text(
+                    'VERIFICAR PIN', // CORREGIDO: Texto para Admin
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Verificar',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
             ],
@@ -141,41 +187,37 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen> {
   }
 
   Widget _buildOtpBox(int index) {
-    return SizedBox(
-      width: 45,
-      height: 55,
-      child: TextField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          counterText: '',
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10.0),
-            borderSide: const BorderSide(color: Colors.grey),
+    return Container(
+      width: 50,
+      height: 65,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade400, width: 1),
+      ),
+      child: Center(
+        child: TextField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          decoration: const InputDecoration(
+            counterText: '',
+            border: InputBorder.none,
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10.0),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-        ),
-        onChanged: (value) {
-          if (value.isNotEmpty) {
-            if (index < 5) {
+          onChanged: (value) {
+            if (value.isNotEmpty && index < 5) {
               _focusNodes[index + 1].requestFocus();
-            } else {
-              _focusNodes[index].unfocus();
-              _validarCodigo(); // Valida automáticamente al llenar el último
-            }
-          } else if (value.isEmpty) {
-            if (index > 0) {
+            } else if (value.isEmpty && index > 0) {
               _focusNodes[index - 1].requestFocus();
             }
-          }
-        },
+            if (value.length == 1 && index == 5) {
+              _validarCodigo();
+            }
+          },
+        ),
       ),
     );
   }

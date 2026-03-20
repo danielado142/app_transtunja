@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// Asegúrate de que esta ruta sea la correcta según tu carpeta:
+// Asegúrate de que esta ruta sea la correcta en tu proyecto
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
@@ -7,10 +7,10 @@ class DriverVerificationScreen extends StatefulWidget {
 
   @override
   State<DriverVerificationScreen> createState() =>
-      _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7();
+      _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
 }
 
-class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
+class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
     extends State<DriverVerificationScreen> {
   final String _codigoCorrecto = "654321";
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
@@ -27,76 +27,64 @@ class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
   }
 
   void _validarCodigo() {
-    String codigoIngresado = "";
-    for (var controller in _controllers) {
-      codigoIngresado += controller.text.trim().replaceAll(
-        RegExp(r'[^0-9]'),
-        '',
-      );
-    }
-
+    String codigoIngresado = _controllers.map((e) => e.text).join();
     if (codigoIngresado == _codigoCorrecto) {
-      _mostrarExito();
+      _mostrarAlertaExito();
     } else {
       _mostrarError();
     }
   }
 
-  void _mostrarExito() {
+  void _mostrarAlertaExito() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFFFDF2F2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 10),
-            const Icon(Icons.directions_car, color: Colors.green, size: 80),
+            const SizedBox(height: 15),
+            const Icon(Icons.directions_car, color: Colors.green, size: 85),
             const SizedBox(height: 25),
             const Text(
-              '¡Código Correcto!',
+              '¡Acceso Confirmado!',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             const Text(
-              'Acceso como Conductor.',
+              'Has ingresado como Conductor del sistema.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 17, color: Colors.black54),
+              style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
           ],
         ),
         actions: [
           Center(
-            child: TextButton(
-              onPressed: () {
-                // 1. Cerramos el diálogo primero
-                Navigator.pop(context);
-
-                // 2. Saltamos a la pantalla del Home de Conductor
-                // Usamos pushAndRemoveUntil para que no pueda volver atrás a la verificación
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const HomeConductor(nombreConductor: "Conductor"),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const HomeConductor(nombreConductor: "Conductor"),
+                    ),
+                    (route) => false,
+                  );
+                },
+                child: const Text(
+                  "Aceptar",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.green, // Texto en verde para combinar
+                    fontWeight: FontWeight.bold,
                   ),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                "Aceptar",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFFC0392B),
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -111,9 +99,10 @@ class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
       const SnackBar(
         content: Text("Código de conductor incorrecto."),
         backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
       ),
     );
-    for (var c in _controllers) c.clear();
+    for (var controller in _controllers) controller.clear();
     _focusNodes[0].requestFocus();
   }
 
@@ -122,43 +111,75 @@ class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Verificación Conductor"),
         backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 22,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Verificación Conductor",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 25.0),
           child: Column(
             children: [
+              const SizedBox(height: 40),
               const Text(
                 'Seguridad Conductor',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
               ),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) => _buildOtpBox(index)),
+              const SizedBox(height: 20),
+              const Text(
+                'Ingresa el código de 6 dígitos para continuar',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 50),
-              ElevatedButton(
-                onPressed: _validarCodigo,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2ECC71),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 100,
-                    vertical: 15,
+              // FILA DE CUADRITOS REDONDEADOS (DISEÑO IGUAL AL DE ADMIN)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) => _buildOtpBox(index)),
+              ),
+              const SizedBox(height: 60),
+              // BOTÓN ESTILO "CÁPSULA" EN COLOR VERDE
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _validarCodigo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(
+                      0xFF2ECC71,
+                    ), // Tu verde original
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text(
-                  'Verificar',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                  child: const Text(
+                    'Verificar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -170,30 +191,37 @@ class _Dr3nP5oFahNL86vESFrkKjmuupsQa1mPzN7
   }
 
   Widget _buildOtpBox(int index) {
-    return SizedBox(
-      width: 45,
-      height: 55,
-      child: TextField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          counterText: '',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    return Container(
+      width: 50,
+      height: 65,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade400, width: 1),
+      ),
+      child: Center(
+        child: TextField(
+          controller: _controllers[index],
+          focusNode: _focusNodes[index],
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          decoration: const InputDecoration(
+            counterText: '',
+            border: InputBorder.none,
+          ),
+          onChanged: (value) {
+            if (value.isNotEmpty && index < 5) {
+              _focusNodes[index + 1].requestFocus();
+            } else if (value.isEmpty && index > 0) {
+              _focusNodes[index - 1].requestFocus();
+            }
+            if (value.length == 1 && index == 5) {
+              _validarCodigo();
+            }
+          },
         ),
-        onChanged: (value) {
-          if (value.isNotEmpty && index < 5) {
-            _focusNodes[index + 1].requestFocus();
-          } else if (value.isEmpty && index > 0) {
-            _focusNodes[index - 1].requestFocus();
-          }
-          if (value.length == 1 && index == 5) {
-            _validarCodigo();
-          }
-        },
       ),
     );
   }

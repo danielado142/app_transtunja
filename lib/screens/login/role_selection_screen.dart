@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-// Asegúrate de que estas rutas sean correctas en tu proyecto
-import '../administrador/admin_verification_screen.dart';
+
+// --- IMPORTS DE LAS INTERFACES DESTINO ---
+import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
+// IMPORTANTE: Importamos la pantalla del PIN
+import 'package:app_transtunja/screens/administrador/admin_verification_screen.dart';
 import '../conductor/verificacion_conductor.dart';
-// IMPORTANTE: Importamos la interfaz de usuario para que el botón funcione
 import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -10,6 +12,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
   const RoleSelectionScreen({super.key, required this.userData});
 
+  // --- CORRECCIÓN: Ahora manda a la Verificación de PIN, no a la alerta ---
   void _goToAdmin(BuildContext context) {
     Navigator.push(
       context,
@@ -24,7 +27,7 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // --- ESTA ES LA FUNCIÓN QUE MODIFICAMOS PARA TI ---
+  // --- ESTA FUNCIÓN DE USUARIO SE MANTIENE IGUAL ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
@@ -56,11 +59,7 @@ class RoleSelectionScreen extends StatelessWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                // 1. Cerramos el diálogo actual
                 Navigator.pop(context);
-
-                // 2. NAVEGAMOS A LA INTERFAZ DE USUARIO (MAPA Y RUTAS)
-                // Usamos pushReplacement para que no pueda volver atrás a la selección de rol
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -85,7 +84,8 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String nombre = userData['nombreUsuario'] ?? 'Usuario';
+    final String nombre =
+        userData['nombreUsuario'] ?? userData['nombres'] ?? 'Usuario';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -123,6 +123,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.security,
                     label: 'Administrador',
                     color: const Color(0xFFF39C12),
+                    // AQUÍ ESTÁ EL CAMBIO CLAVE:
                     onTap: () => _goToAdmin(context),
                   ),
                   const SizedBox(height: 30),
