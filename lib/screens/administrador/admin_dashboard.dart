@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// Asegúrate de que estos nombres de archivo coincidan con los que tienes en VS Code
 import 'package:app_transtunja/screens/administrador/crear_ruta.dart';
 import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
 
@@ -50,8 +51,10 @@ class AdminDashboard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const HistorialRutas(),
-                    ), // Solucionado el typo aquí
+                      // Aquí llamamos al historial pasando el parámetro que pide
+                      builder: (_) =>
+                          const HistorialRutas(apiBaseUrl: '/transtunja'),
+                    ),
                   );
                 },
               ),

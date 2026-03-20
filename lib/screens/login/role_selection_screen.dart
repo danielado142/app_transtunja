@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 // Asegúrate de que estas rutas sean correctas en tu proyecto
 import '../administrador/admin_verification_screen.dart';
 import '../conductor/verificacion_conductor.dart';
+// IMPORTANTE: Importamos la interfaz de usuario para que el botón funcione
+import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -22,6 +24,7 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
+  // --- ESTA ES LA FUNCIÓN QUE MODIFICAMOS PARA TI ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
@@ -53,10 +56,17 @@ class RoleSelectionScreen extends StatelessWidget {
           Center(
             child: TextButton(
               onPressed: () {
+                // 1. Cerramos el diálogo actual
                 Navigator.pop(context);
-                // Si aún no tienes definida la ruta '/mapa_pasajero' en main.dart,
-                // esto dará error. Asegúrate de que exista.
-                Navigator.pushReplacementNamed(context, '/mapa_pasajero');
+
+                // 2. NAVEGAMOS A LA INTERFAZ DE USUARIO (MAPA Y RUTAS)
+                // Usamos pushReplacement para que no pueda volver atrás a la selección de rol
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserHomeScreen(),
+                  ),
+                );
               },
               child: const Text(
                 "Aceptar",
@@ -75,7 +85,6 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos 'nombreUsuario' porque así lo enviaremos desde el AuthService
     final String nombre = userData['nombreUsuario'] ?? 'Usuario';
 
     return Scaffold(

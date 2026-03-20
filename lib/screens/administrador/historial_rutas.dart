@@ -5,6 +5,7 @@ import 'package:app_transtunja/screens/administrador/ver_ruta.dart';
 import 'package:app_transtunja/services/ruta_service.dart';
 
 class HistorialRutas extends StatefulWidget {
+  // Ajustado para que el valor por defecto funcione correctamente en el constructor
   const HistorialRutas({super.key, this.apiBaseUrl = '/transtunja'});
 
   final String apiBaseUrl;

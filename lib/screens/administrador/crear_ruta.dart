@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+// IMPORTANTE: Esta es la línea que debe estar cargada correctamente
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:app_transtunja/services/routing_service.dart';
 import 'package:app_transtunja/services/ruta_service.dart';
 
-class HistorialRutas extends StatefulWidget {
-  const HistorialRutas({super.key, this.apiBaseUrl = '/transtunja'});
+class CrearRuta extends StatefulWidget {
+  const CrearRuta({super.key, this.apiBaseUrl = '/transtunja'});
 
   final String apiBaseUrl;
 
@@ -49,6 +50,7 @@ class _CrearRutaState extends State<CrearRuta> {
     _routeDebounce?.cancel();
     _nombreCtrl.dispose();
     _destinoCtrl.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -63,25 +65,20 @@ class _CrearRutaState extends State<CrearRuta> {
 
   Future<void> _handleMapTap(LatLng tappedPoint) async {
     if (_isSaving) return;
-
     if (_selectedMarkerIndex != null) {
       await _moveSelectedMarker(tappedPoint);
       return;
     }
-
     await _addPoint(tappedPoint);
   }
 
   Future<void> _addPoint(LatLng point) async {
     try {
       final snapped = await _routingService.snapPointToRoad(point);
-
       if (!mounted) return;
-
       setState(() {
         _waypoints.add(snapped);
       });
-
       _scheduleRouteRebuild();
     } catch (e) {
       _showSnack('No se pudo agregar el punto: $e', isError: true);
@@ -91,17 +88,13 @@ class _CrearRutaState extends State<CrearRuta> {
   Future<void> _moveSelectedMarker(LatLng point) async {
     final index = _selectedMarkerIndex;
     if (index == null) return;
-
     try {
       final snapped = await _routingService.snapPointToRoad(point);
-
       if (!mounted) return;
-
       setState(() {
         _waypoints[index] = snapped;
         _selectedMarkerIndex = null;
       });
-
       _scheduleRouteRebuild();
     } catch (e) {
       _showSnack('No se pudo mover el marcador: $e', isError: true);
@@ -113,12 +106,10 @@ class _CrearRutaState extends State<CrearRuta> {
       _showSnack('La ruta debe tener al menos 2 puntos.', isError: true);
       return;
     }
-
     setState(() {
       _waypoints.removeAt(index);
       _selectedMarkerIndex = null;
     });
-
     _scheduleRouteRebuild();
   }
 
@@ -134,35 +125,24 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       return;
     }
-
     final requestId = ++_routeRequestId;
-
     setState(() {
       _isRouting = true;
     });
-
     try {
       final polyline = await _routingService.buildRoadPolyline(_waypoints);
-
       if (!mounted || requestId != _routeRequestId) return;
-
       setState(() {
         _polylinePoints = polyline;
       });
     } catch (_) {
       if (!mounted || requestId != _routeRequestId) return;
-
       setState(() {
         _polylinePoints = List<LatLng>.from(_waypoints);
       });
-
-      _showSnack(
-        'No se pudo ajustar la ruta a las calles. Se dejó el trazado manual.',
-        isError: true,
-      );
+      _showSnack('Trazado manual (ajuste a vía fallido).', isError: true);
     } finally {
       if (!mounted || requestId != _routeRequestId) return;
-
       setState(() {
         _isRouting = false;
       });
@@ -177,188 +157,128 @@ class _CrearRutaState extends State<CrearRuta> {
       _polylinePoints.clear();
       _selectedMarkerIndex = null;
     });
-
-    _showSnack('Formulario restablecido.');
-  }
-
-  bool _validateBeforeSave() {
-    if (_nombreCtrl.text.trim().isEmpty || _destinoCtrl.text.trim().isEmpty) {
-      _showSnack('Completa nombre y destino.', isError: true);
-      return false;
-    }
-
-    if (_waypoints.length < 2) {
-      _showSnack('Debes marcar al menos 2 puntos en el mapa.', isError: true);
-      return false;
-    }
-
-    return true;
   }
 
   Future<void> _guardarRuta() async {
-    if (!_validateBeforeSave()) return;
-
-    _routeDebounce?.cancel();
-
-    setState(() {
-      _isSaving = true;
-    });
-
+    if (_nombreCtrl.text.isEmpty || _waypoints.length < 2) {
+      _showSnack('Nombre y al menos 2 puntos requeridos.', isError: true);
+      return;
+    }
+    setState(() => _isSaving = true);
     try {
-      if (_polylinePoints.length < 2) {
-        await _rebuildPolyline();
-      }
-
       final routeId = 'R-${DateTime.now().millisecondsSinceEpoch}';
-
       final resultado = await _rutaService.guardarRuta(
         routeId: routeId,
         nombre: _nombreCtrl.text,
         destino: _destinoCtrl.text,
         waypoints: _waypoints,
-        polylinePoints: _polylinePoints.length >= 2
+        polylinePoints: _polylinePoints.isNotEmpty
             ? _polylinePoints
             : _waypoints,
       );
-
-      if (!mounted) return;
-
-      if (resultado['success'] == true || resultado['ok'] == true) {
-        _showSnack('Ruta guardada correctamente.');
+      if (mounted && resultado['success'] == true) {
+        _showSnack('Ruta guardada en XAMPP.');
         Navigator.pop(context, true);
-      } else {
-        _showSnack(
-          resultado['message']?.toString() ?? 'No se pudo guardar la ruta.',
-          isError: true,
-        );
       }
     } catch (e) {
-      if (!mounted) return;
-      _showSnack('Error al guardar: $e', isError: true);
+      _showSnack('Error: $e', isError: true);
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isSaving = false;
-      });
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  Widget _buildMap() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _tunjaCenter,
-          initialZoom: 14.5,
-          onTap: (_, point) => _handleMapTap(point),
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.transtunja.admin',
-            tileProvider: CancellableNetworkTileProvider(),
-          ),
-          if (_polylinePoints.length >= 2)
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: _polylinePoints,
-                  strokeWidth: 5.0,
-                  color: Colors.red,
-                ),
-              ],
-            ),
-          MarkerLayer(
-            markers: List.generate(_waypoints.length, (index) {
-              final isSelected = _selectedMarkerIndex == index;
-
-              return Marker(
-                point: _waypoints[index],
-                width: 44,
-                height: 44,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedMarkerIndex = isSelected ? null : index;
-                    });
-                  },
-                  onLongPress: () => _removePoint(index),
-                  child: Icon(
-                    Icons.location_on,
-                    size: 40,
-                    color: isSelected ? Colors.amber : Colors.red,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Configurar Nueva Ruta')),
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            _buildTopPanel(),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _tunjaCenter,
+                    initialZoom: 14.5,
+                    onTap: (_, point) => _handleMapTap(point),
                   ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.transtunja.admin',
+                      // Aquí se usa el componente del paquete instalado
+                      tileProvider: CancellableNetworkTileProvider(),
+                    ),
+                    if (_polylinePoints.length >= 2)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _polylinePoints,
+                            strokeWidth: 5.0,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    MarkerLayer(
+                      markers: _waypoints.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        LatLng point = entry.value;
+                        bool isSelected = _selectedMarkerIndex == index;
+                        return Marker(
+                          point: point,
+                          width: 40,
+                          height: 40,
+                          child: GestureDetector(
+                            onTap: () => setState(
+                              () => _selectedMarkerIndex = isSelected
+                                  ? null
+                                  : index,
+                            ),
+                            onLongPress: () => _removePoint(index),
+                            child: Icon(
+                              Icons.location_on,
+                              size: 40,
+                              color: isSelected ? Colors.orange : Colors.red,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
-              );
-            }),
-          ),
-        ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildBottomButtons(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTopPanel() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          TextField(
-            controller: _nombreCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nombre de la ruta',
-              border: OutlineInputBorder(),
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            TextField(
+              controller: _nombreCtrl,
+              decoration: const InputDecoration(labelText: 'Nombre Ruta'),
             ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _destinoCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Destino',
-              border: OutlineInputBorder(),
+            TextField(
+              controller: _destinoCtrl,
+              decoration: const InputDecoration(labelText: 'Destino Final'),
             ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(
-                label: Text('Puntos: ${_waypoints.length}'),
-                avatar: const Icon(Icons.alt_route, size: 18),
-              ),
-              Chip(
-                label: Text(
-                  _selectedMarkerIndex == null
-                      ? 'Modo: agregar'
-                      : 'Mover marcador ${_selectedMarkerIndex! + 1}',
-                ),
-                avatar: const Icon(Icons.edit_location_alt, size: 18),
-              ),
-              Chip(
-                label: Text(_isRouting ? 'Ajustando a vías...' : 'Ruta lista'),
-                avatar: Icon(
-                  _isRouting ? Icons.sync : Icons.check_circle,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Toca el mapa para agregar un punto. '
-              'Toca un marcador y luego el mapa para moverlo. '
-              'Mantén presionado un marcador para eliminarlo.',
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -368,8 +288,8 @@ class _CrearRutaState extends State<CrearRuta> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: _isSaving ? null : _clearForm,
-            child: const Text('Restablecer'),
+            onPressed: _clearForm,
+            child: const Text('Limpiar'),
           ),
         ),
         const SizedBox(width: 10),
@@ -379,40 +299,13 @@ class _CrearRutaState extends State<CrearRuta> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
             ),
             child: _isSaving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Text('Guardar ruta'),
+                ? const CircularProgressIndicator()
+                : const Text('Guardar en BD'),
           ),
         ),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crear Ruta')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            _buildTopPanel(),
-            const SizedBox(height: 12),
-            Expanded(child: _buildMap()),
-            const SizedBox(height: 12),
-            _buildBottomButtons(),
-          ],
-        ),
-      ),
     );
   }
 }
