@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../models/route_detail_model.dart';
-import '../../models/route_stop_model.dart';
-
 class RouteDetailScreen extends StatelessWidget {
   final String routeName;
   final String stopName;
@@ -15,19 +12,96 @@ class RouteDetailScreen extends StatelessWidget {
     required this.etaText,
   });
 
+  List<_Stop> _buildStops() {
+    final parts = routeName.split(' - ');
+    final origin = parts.isNotEmpty ? parts.first.trim() : routeName.trim();
+    final destination = parts.length > 1 ? parts.last.trim() : '';
+
+    final List<_Stop> stops = [
+      _Stop(
+        name: origin,
+        info: 'Punto de inicio',
+        state: _StopState.start,
+      ),
+    ];
+
+    if (stopName.trim().isNotEmpty &&
+        stopName.trim().toLowerCase() != origin.toLowerCase() &&
+        stopName.trim().toLowerCase() != destination.toLowerCase()) {
+      stops.add(
+        _Stop(
+          name: stopName,
+          info: 'Parada cercana',
+          state: _StopState.current,
+        ),
+      );
+    }
+
+    if (destination.isNotEmpty) {
+      stops.add(
+        _Stop(
+          name: destination,
+          info: 'Destino final',
+          state: _StopState.end,
+        ),
+      );
+    }
+
+    if (stopName.trim().toLowerCase() == origin.toLowerCase()) {
+      stops[0] = _Stop(
+        name: origin,
+        info: 'Parada actual',
+        state: _StopState.current,
+      );
+
+      if (destination.isNotEmpty) {
+        stops.add(
+          _Stop(
+            name: destination,
+            info: 'Destino final',
+            state: _StopState.end,
+          ),
+        );
+      }
+    }
+
+    if (destination.isNotEmpty &&
+        stopName.trim().toLowerCase() == destination.toLowerCase()) {
+      stops.clear();
+      stops.add(
+        _Stop(
+          name: origin,
+          info: 'Punto de inicio',
+          state: _StopState.start,
+        ),
+      );
+      stops.add(
+        _Stop(
+          name: destination,
+          info: 'Parada actual',
+          state: _StopState.current,
+        ),
+      );
+    }
+
+    return stops;
+  }
+
   @override
   Widget build(BuildContext context) {
     const red = Color(0xFFD10000);
 
-    final detail = RouteDetailModel.fromBasicData(
-      routeName: routeName,
-      stopName: stopName,
-      etaText: etaText,
-    );
+    final routeParts = routeName.split(' - ');
+    final origin = routeParts.isNotEmpty ? routeParts.first : routeName;
+    final destination = routeParts.length > 1 ? routeParts.last : '';
+    final stops = _buildStops();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F7),
       appBar: AppBar(
+        backgroundColor: red,
+        foregroundColor: Colors.white,
+        elevation: 0,
         centerTitle: true,
         title: const Text(
           "Detalle de ruta",
@@ -62,7 +136,10 @@ class RouteDetailScreen extends StatelessWidget {
                         color: red.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.directions_bus, color: red),
+                      child: const Icon(
+                        Icons.directions_bus,
+                        color: red,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -70,7 +147,9 @@ class RouteDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            detail.routeName,
+                            routeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
@@ -78,9 +157,11 @@ class RouteDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            detail.destination.isEmpty
-                                ? detail.origin
-                                : '${detail.origin}  →  ${detail.destination}',
+                            destination.isEmpty
+                                ? origin
+                                : '$origin  →  $destination',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.black54,
                               fontWeight: FontWeight.w600,
@@ -94,19 +175,18 @@ class RouteDetailScreen extends StatelessWidget {
                             children: [
                               _InfoPill(
                                 icon: Icons.schedule,
-                                text: 'Próximo bus: ${detail.etaText}',
+                                text: 'Próximo bus: $etaText',
                                 color: red,
                               ),
                               _InfoPill(
                                 icon: Icons.place_outlined,
-                                text: 'Parada actual: ${detail.stopName}',
+                                text: 'Parada actual: $stopName',
                                 color: Colors.black87,
                                 light: true,
                               ),
                               _InfoPill(
                                 icon: Icons.alt_route,
-                                text:
-                                    '${detail.stops.length} puntos en la ruta',
+                                text: '${stops.length} puntos en la ruta',
                                 color: Colors.black87,
                                 light: true,
                               ),
@@ -144,7 +224,10 @@ class RouteDetailScreen extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "Recorrido",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -152,11 +235,11 @@ class RouteDetailScreen extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: detail.stops.length,
+                itemCount: stops.length,
                 itemBuilder: (context, index) {
-                  final stop = detail.stops[index];
+                  final stop = stops[index];
                   final isFirst = index == 0;
-                  final isLast = index == detail.stops.length - 1;
+                  final isLast = index == stops.length - 1;
 
                   return _TimelineTile(
                     stop: stop,
@@ -221,33 +304,56 @@ class _InfoPill extends StatelessWidget {
     final bg = light ? Colors.black.withOpacity(0.05) : color.withOpacity(0.10);
     final fg = light ? Colors.black87 : color;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.68,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: fg),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: fg),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
+enum _StopState { start, current, end }
+
+class _Stop {
+  final String name;
+  final String info;
+  final _StopState state;
+
+  const _Stop({
+    required this.name,
+    required this.info,
+    required this.state,
+  });
+}
+
 class _TimelineTile extends StatelessWidget {
-  final RouteStopModel stop;
+  final _Stop stop;
   final Color red;
   final bool isFirst;
   final bool isLast;
@@ -261,9 +367,9 @@ class _TimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCurrent = stop.state == RouteStopState.current;
-    final isStart = stop.state == RouteStopState.start;
-    final isEnd = stop.state == RouteStopState.end;
+    final isCurrent = stop.state == _StopState.current;
+    final isStart = stop.state == _StopState.start;
+    final isEnd = stop.state == _StopState.end;
 
     final dotColor = isCurrent ? red : Colors.black26;
     final titleWeight = isCurrent ? FontWeight.w900 : FontWeight.w700;
@@ -335,7 +441,10 @@ class _TimelineTile extends StatelessWidget {
                     color: isCurrent ? red.withOpacity(0.10) : Colors.black12,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: isCurrent ? red : Colors.black54),
+                  child: Icon(
+                    icon,
+                    color: isCurrent ? red : Colors.black54,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -344,17 +453,25 @@ class _TimelineTile extends StatelessWidget {
                     children: [
                       Text(
                         stop.name,
-                        style: TextStyle(fontSize: 15, fontWeight: titleWeight),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: titleWeight,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         stop.info,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.black54),
                       ),
                     ],
                   ),
                 ),
-                if (isCurrent)
+                if (isCurrent) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -373,6 +490,7 @@ class _TimelineTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
               ],
             ),
           ),
