@@ -4,12 +4,10 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// --- CONFIGURACIÓN DE CONEXIÓN (Datos de Clever Cloud) ---
-// Nota: Puedes encontrar estos datos en la pestaña 'Information' de tu bd en Clever Cloud
 $host = "bi6xzhsfzn2upz5oyduw-mysql.services.clever-cloud.com"; 
 $db   = "bi6xzhsfzn2upz5oyduw"; 
-$user = "ueunp4f6s6p49shv"; // Reemplaza con tu 'User' real de Clever Cloud
-$pass = "f4YbvuIVeFTN7Ed3Klu7"; // Reemplaza con tu 'Password' real de Clever Cloud
+$user = "ueunp4f6s6p49shv"; 
+$pass = "f4YbvuIVeFTN7Ed3Klu7"; 
 
 $conn = new mysqli($host, $user, $pass, $db);
 
@@ -22,9 +20,9 @@ $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
 if ($data) {
-    // Escapar datos para evitar inyecciones SQL
-    $nombreUsuario   = $conn->real_escape_string($data['nombreUsuario']);
-    $tipoDocumento   = $conn->real_escape_string($data['tipoDocumento']);
+    // Datos que vienen de Flutter
+    $nombreUsuario   = $conn->real_escape_string($data['nombreUsuario'] ?? 'usuario_nuevo');
+    $tipoDocumento   = $conn->real_escape_string($data['tipoDocumento'] ?? 'CC');
     $identificacion  = $conn->real_escape_string($data['identificacion']);
     $nombreCompleto  = $conn->real_escape_string($data['nombreCompleto']);
     $correo          = $conn->real_escape_string($data['correo']);
@@ -33,12 +31,12 @@ if ($data) {
     $fechaNacimiento = $conn->real_escape_string($data['fechaNacimiento']);
     $telefono        = $conn->real_escape_string($data['telefono']);
     
-    // Valores por defecto para columnas que no pueden ser NULL en tu tabla
-    $genero          = "No especificado";
-    $metodo_registro = "tradicional";
-    $estado          = "activo";
+    // CAMPOS QUE FALTABAN (Obligatorios en tu base de datos)
+    $genero          = "No especificado"; //
+    $metodo_registro = "tradicional";      //
+    $estado          = "activo";           //
 
-    // --- EL CAMBIO IMPORTANTE: "usuario" en singular ---
+    // SQL con las 12 columnas (omitiendo id_usuario que es auto_increment)
     $sql = "INSERT INTO usuario (
                 nombreUsuario, tipoDocumento, identificacion, nombreCompleto, 
                 correo, contrasena, idRol, fechaNacimiento, 
@@ -50,12 +48,12 @@ if ($data) {
             )";
 
     if ($conn->query($sql) === TRUE) {
-        echo json_encode(["status" => "success", "message" => "¡Registro exitoso!"]);
+        echo json_encode(["status" => "success", "message" => "¡Lina registrada con éxito!"]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Error en DB: " . $conn->error]);
+        echo json_encode(["status" => "error", "message" => "Error MySQL: " . $conn->error]);
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "JSON vacío"]);
+    echo json_encode(["status" => "error", "message" => "No se recibió el JSON"]);
 }
 
 $conn->close();
