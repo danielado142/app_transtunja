@@ -10,7 +10,7 @@ $user = "ueunp4f6s6p49shv";
 $pass = "f4YbvuIVeFTN7Ed3Klu7"; 
 
 $conn = new mysqli($host, $user, $pass, $db);
-$conn->set_charset("utf8mb4"); // Asegura que las tildes no rompan nada
+$conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {
     echo json_encode(["status" => "error", "message" => "Conexión fallida"]);
@@ -21,21 +21,21 @@ $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
 if ($data) {
-    // Extraemos con nombres exactos de tu Flutter
+    // Leemos los datos de Flutter con valores de respaldo
     $nombreUsuario   = $conn->real_escape_string($data['nombreUsuario'] ?? 'user_'.time());
     $tipoDocumento   = $conn->real_escape_string($data['tipoDocumento'] ?? 'CC');
-    $identificacion  = $conn->real_escape_string($data['identificacionacion'] ?? $data['identificacion'] ?? '0');
-    $nombreCompleto  = $conn->real_escape_string($data['nombreCompleto'] ?? 'Sin Nombre');
+    $identificacion  = $conn->real_escape_string($data['identificacion'] ?? '0');
+    $nombreCompleto  = $conn->real_escape_string($data['nombreCompleto'] ?? 'Usuario Nuevo');
     $correo          = $conn->real_escape_string($data['correo'] ?? '');
     $contrasena      = password_hash($data['contrasena'] ?? '123456', PASSWORD_BCRYPT);
     $idRol           = $conn->real_escape_string($data['idRol'] ?? 'pasajero'); 
     $fechaNacimiento = $conn->real_escape_string($data['fechaNacimiento'] ?? '2000-01-01');
     $telefono        = $conn->real_escape_string($data['telefono'] ?? '');
     
-    // Valores por defecto para tu tabla
-    $genero          = "No especificado";
-    $metodo_registro = "tradicional";
-    $estado          = "activo";
+    // Campos obligatorios según tu tabla 'usuario'
+    $genero          = "No especificado"; 
+    $metodo_registro = "tradicional";      
+    $estado          = "activo";           
 
     $sql = "INSERT INTO usuario (
                 nombreUsuario, tipoDocumento, identificacion, nombreCompleto, 
@@ -48,12 +48,13 @@ if ($data) {
             )";
 
     if ($conn->query($sql) === TRUE) {
-        echo json_encode(["status" => "success", "message" => "¡Lina registrada!"]);
+        echo json_encode(["status" => "success", "message" => "¡Registro en nube exitoso!"]);
     } else {
-        echo json_encode(["status" => "error", "message" => $conn->error]);
+        // Esto nos dirá si falta una columna o si el dato es muy largo
+        echo json_encode(["status" => "error", "message" => "Error DB: " . $conn->error]);
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "JSON vacío"]);
+    echo json_encode(["status" => "error", "message" => "JSON no recibido"]);
 }
 $conn->close();
 ?>
