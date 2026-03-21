@@ -1,53 +1,50 @@
 <?php
-// 1. IMPORTAR LA CONEXIÓN DE LA NUBE
+// Reportar errores de PHP para depuración
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include 'conexion.php'; 
 
-// 2. CONFIGURAR CABECERAS PARA FLUTTER (CORREGIDO)
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS"); // Agregamos GET y OPTIONS
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header('Content-Type: application/json; charset=utf-8');
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header('Content-Type: application/json');
 
-// 3. ✅ ESTO ES LO QUE FALTA PARA QUITAR EL BLOQUEO
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit; }
 
-// 4. RECIBIR DATOS DE FLUTTER
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if ($data) {
-    // Usamos nombres que coincidan con tu base de datos
-    $nombre = isset($data['nombre']) ? $conexion->real_escape_string($data['nombre']) : '';
-    $email = isset($data['email']) ? $conexion->real_escape_string($data['email']) : '';
-    $metodo = isset($data['metodo']) ? $conexion->real_escape_string($data['metodo']) : 'google';
-
-    if (empty($email)) {
-        echo json_encode(["status" => "error", "message" => "El correo es obligatorio"]);
-        exit;
-    }
-
-    // Verificamos si el usuario ya existe
-    $consulta = "SELECT * FROM usuario WHERE correo = '$email'";
-    $resultado = $conexion->query($consulta);
-
-    if ($resultado && $resultado->num_rows > 0) {
-        echo json_encode(["status" => "success", "message" => "Sesión iniciada"]);
-    } else {
-        // Insertamos el nuevo usuario
-        $sql = "INSERT INTO usuario (nombre, correo, metodo_registro) VALUES ('$nombre', '$email', '$metodo')";
-        
-        if ($conexion->query($sql) === TRUE) {
-            echo json_encode(["status" => "success", "message" => "Usuario registrado en la nube"]);
-        } else {
-            echo json_encode(["status" => "error", "message" => "Error al registrar: " . $conexion->error]);
-        }
-    }
-} else {
-    echo json_encode(["status" => "error", "message" => "No se recibieron datos"]);
+if (!$data) {
+    echo json_encode(["status" => "error", "message" => "JSON no recibido o mal formado"]);
+    exit;
 }
 
+// 1. Capturar datos con valores por defecto para evitar "null" en la DB
+$usuario   = $data['nombreUsuario'] ?? '';
+$nombres   = $data['nombres'] ?? '';
+$apellidos = $data['apellidos'] ?? '';
+$tipoDoc   = $data['tipoDocumento'] ?? '';
+$documento = $data['documento'] ?? '';
+$fechaNac  = $data['fechaNacimiento'] ?? '';
+$email     = $data['correo'] ?? '';
+$pass      = password_hash($data['contrasena'] ?? '', PASSWORD_DEFAULT);
+$telefono  = $data['telefono'] ?? '';
+$rol       = $data['idRol'] ?? 'pasajero';
+
+// 2. Intentar la inserción
+$sql = "INSERT INTO usuario (nombreUsuario, nombres, apellidos, tipoDocumento, documento, fechaNacimiento, correo, contrasena, telefono, idRol) 
+        VALUES ('$usuario', '$nombres', '$apellidos', '$tipoDoc', '$documento', '$fechaNac', '$email', '$pass', '$telefono', '$rol')";
+
+if ($conexion->query($sql) === TRUE) {
+    echo json_encode(["status" => "success", "message" => "¡Registro exitoso!"]);
+} else {
+    // 👈 ESTO nos dirá si falta una columna o si el nombre está mal
+    echo json_encode([
+        "status" => "error", 
+        "message" => "Error MySQL: " . $conexion->error,
+        "query_ejecutada" => $sql
+    ]);
+}
 $conexion->close();
 ?>
