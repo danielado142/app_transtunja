@@ -5,31 +5,31 @@ include_once 'conexion.php';
 
 $data = json_decode(file_get_contents("php://input"));
 
-if ($data) {
-    // Usamos los nombres de columnas exactos de tu base de datos: nombreUsuario, tipoDocumento, etc.
-    $sql = "INSERT INTO usuario (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena, fechaNacimiento, telefono, id_rol) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+if ($data && !empty($data->nombreUsuario)) {
+    // 1. Preparamos la consulta con los nombres de tus columnas
+    $sql = "INSERT INTO usuario (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena, idRol, fechaNacimiento, telefono, estado) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo')";
     
     $stmt = $conexion->prepare($sql);
     
-    // Encriptamos la clave
     $pass_hash = password_hash($data->contrasena, PASSWORD_BCRYPT);
 
-    // "ssssssssi" -> 8 textos y 1 entero para idRol
-    $stmt->bind_param("ssssssssi", 
+    // 2. CAMBIO CLAVE: Usamos "sssssssss" (todo texto) 
+    // y enviamos $data->nombreRol ("pasajero") en lugar del id numérico
+    $stmt->bind_param("sssssssss", 
         $data->nombreUsuario, 
         $data->tipoDocumento, 
         $data->identificacion, 
         $data->nombreCompleto, 
         $data->correo, 
         $pass_hash, 
+        $data->nombreRol, // <--- Aquí enviamos "pasajero"
         $data->fechaNacimiento, 
-        $data->telefono, 
-        $data->idRol // Tu Flutter ya envía el número 3
+        $data->telefono
     );
 
     if($stmt->execute()) {
-        echo json_encode(["status" => "success", "message" => "Registro exitoso"]);
+        echo json_encode(["status" => "success", "message" => "Usuario registrado correctamente"]);
     } else {
         http_response_code(500);
         echo json_encode(["status" => "error", "message" => $stmt->error]);
