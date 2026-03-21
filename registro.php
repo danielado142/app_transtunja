@@ -7,7 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 $host = "bi6xzhsfzn2upz5oyduw-mysql.services.clever-cloud.com"; 
 $db   = "bi6xzhsfzn2upz5oyduw"; 
 $user = "ueunp4f6s6p49shv"; 
-$pass = "f4YbvuIVeFTN7Ed3Klu7"; 
+$pass = "9XG8z0E3f2G6Xq0h7E9y"; 
 
 $conn = new mysqli($host, $user, $pass, $db);
 
