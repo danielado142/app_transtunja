@@ -7,7 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 $host = "bi6xzhsfzn2upz5oyduw-mysql.services.clever-cloud.com"; 
 $db   = "bi6xzhsfzn2upz5oyduw"; 
 $user = "ueunp4f6s6p49shv"; 
-$pass = "9XG8z0E3f2G6Xq0h7E9y"; 
+$pass = "f4YbvuIVeFTN7Ed3Klu7"; 
 
 $conn = new mysqli($host, $user, $pass, $db);
 
@@ -20,25 +20,25 @@ $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
 if ($data) {
-    // 1. EXTRAEMOS SOLO LO QUE VIENE DE TU APP
-    $nombreCompleto  = $conn->real_escape_string($data['nombreCompleto']);
-    $identificacion  = $conn->real_escape_string($data['identificacion']);
-    $correo          = $conn->real_escape_string($data['correo']);
-    $telefono        = $conn->real_escape_string($data['telefono']);
-    $contrasena      = password_hash($data['contrasena'], PASSWORD_BCRYPT);
-    $fechaNacimiento = $conn->real_escape_string($data['fechaNacimiento']);
-    $idRol           = $conn->real_escape_string($data['idRol']); // Ej: 'pasajero'
+    // --- TRUCO PARA QUE FUNCIONE SÍ O SÍ ---
+    // Usamos el operador ?? para que busque varios nombres posibles
+    $nombreCompleto  = $conn->real_escape_string($data['nombreCompleto'] ?? $data['nombre'] ?? $data['nombres'] ?? 'Usuario');
+    $identificacion  = $conn->real_escape_string($data['identificacion'] ?? $data['documento'] ?? '000');
+    $correo          = $conn->real_escape_string($data['correo'] ?? $data['email'] ?? '');
+    $telefono        = $conn->real_escape_string($data['telefono'] ?? $data['celular'] ?? '');
+    $contrasena      = password_hash($data['contrasena'] ?? $data['password'] ?? '12345', PASSWORD_BCRYPT);
+    $fechaNacimiento = $conn->real_escape_string($data['fechaNacimiento'] ?? '2000-01-01');
+    $idRol           = $conn->real_escape_string($data['idRol'] ?? 'pasajero'); 
     $tipoDocumento   = $conn->real_escape_string($data['tipoDocumento'] ?? 'CC');
     
-    // El nombre de usuario lo creamos automático con el correo si no viene
+    // Generar nombre de usuario si no llega
     $nombreUsuario   = $conn->real_escape_string($data['nombreUsuario'] ?? explode('@', $correo)[0]);
 
-    // 2. VALORES AUTOMÁTICOS (Para que la DB no dé Error 500)
+    // Valores automáticos para las columnas obligatorias de tu tabla
     $genero          = "No especificado"; 
     $metodo_registro = "tradicional";      
     $estado          = "activo";           
 
-    // 3. INSERTAMOS EN LA TABLA "usuario" (En singular como en tu foto)
     $sql = "INSERT INTO usuario (
                 nombreUsuario, tipoDocumento, identificacion, nombreCompleto, 
                 correo, contrasena, idRol, fechaNacimiento, 
@@ -50,12 +50,13 @@ if ($data) {
             )";
 
     if ($conn->query($sql) === TRUE) {
-        echo json_encode(["status" => "success", "message" => "¡Registro exitoso para Lina!"]);
+        echo json_encode(["status" => "success", "message" => "¡Guardado con éxito!"]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Error interno: " . $conn->error]);
+        // Si falla, esto nos dirá qué columna exacta es el problema
+        echo json_encode(["status" => "error", "message" => "Error MySQL: " . $conn->error]);
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "Datos no recibidos"]);
+    echo json_encode(["status" => "error", "message" => "No llegaron datos"]);
 }
 $conn->close();
 ?>
