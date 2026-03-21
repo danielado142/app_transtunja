@@ -19,4 +19,4 @@ if ($conexion->connect_error) {
 }
 
 $conexion->set_charset("utf8");
-// No cerramos el tag ?> para evitar errores de cabeceras
+// No cerramos el tag ?> para evitar errores de cabeceras   

@@ -1,52 +1,46 @@
 <?php
-include 'conexion.php'; 
-
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header('Content-Type: application/json; charset=utf-8');
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Headers: Content-Type");
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+// Llamamos al archivo que me acabas de mostrar
+include_once 'conexion.php'; 
 
-$json = file_get_contents('php://input');
-$data = json_decode($json, true);
+$data = json_decode(file_get_contents("php://input"));
 
-if ($data) {
-    // Extraemos todos los campos que envías desde el formulario de Flutter
-    $nombres = $conexion->real_escape_string($data['nombres'] ?? '');
-    $apellidos = $conexion->real_escape_string($data['apellidos'] ?? '');
-    $identificacion = $conexion->real_escape_string($data['identificacion'] ?? '');
-    $correo = $conexion->real_escape_string($data['correo'] ?? '');
-    $telefono = $conexion->real_escape_string($data['telefono'] ?? '');
-    $contrasena = $conexion->real_escape_string($data['contrasena'] ?? '');
-    $rol = $conexion->real_escape_string($data['rol'] ?? 'pasajero');
+if ($data && !empty($data->nombreUsuario)) {
+    // Usamos $conexion (con x) porque así lo tienes en tu archivo de conexión
+    $sql = "INSERT INTO usuario (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena, fechaNacimiento, telefono, id_rol) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
+    $stmt = $conexion->prepare($sql);
+    
+    // Encriptamos para seguridad
+    $pass_hash = password_hash($data->contrasena, PASSWORD_BCRYPT);
 
-    if (empty($correo)) {
-        echo json_encode(["status" => "error", "message" => "El correo es obligatorio"]);
-        exit;
-    }
+    // "ssssssssi" significa 8 textos (s) y 1 número entero (i) para el idRol
+    $stmt->bind_param("ssssssssi", 
+        $data->nombreUsuario, 
+        $data->tipoDocumento, 
+        $data->identificacion, 
+        $data->nombreCompleto, 
+        $data->correo, 
+        $pass_hash, 
+        $data->fechaNacimiento, 
+        $data->telefono, 
+        $data->idRol
+    );
 
-    $consulta = "SELECT * FROM usuario WHERE correo = '$correo'";
-    $resultado = $conexion->query($consulta);
-
-    if ($resultado && $resultado->num_rows > 0) {
-        echo json_encode(["status" => "error", "message" => "El usuario ya existe"]);
+    if($stmt->execute()) {
+        echo json_encode(["status" => "success", "message" => "¡Logrado! Usuario creado."]);
     } else {
-        // SQL con todos los campos de tu tabla
-        $sql = "INSERT INTO usuario (nombres, apellidos, identificacion, correo, telefono, contrasena, rol) 
-                VALUES ('$nombres', '$apellidos', '$identificacion', '$correo', '$telefono', '$contrasena', '$rol')";
-        
-        if ($conexion->query($sql) === TRUE) {
-            echo json_encode(["status" => "success", "message" => "¡Registro exitoso!"]);
-        } else {
-            echo json_encode(["status" => "error", "message" => "Error DB: " . $conexion->error]);
-        }
+        http_response_code(500);
+        echo json_encode(["status" => "error", "message" => "Error en la base: " . $stmt->error]);
     }
+    $stmt->close();
 } else {
-    echo json_encode(["status" => "error", "message" => "No se recibieron datos"]);
+    http_response_code(400);
+    echo json_encode(["status" => "error", "message" => "Datos incompletos"]);
 }
 $conexion->close();
-?>
