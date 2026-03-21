@@ -1,38 +1,69 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-header('Content-Type: application/json; charset=utf-8');
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit; }
+// Incluir tu archivo de conexión (asegúrate que el nombre sea correcto)
+include_once 'config.php'; 
 
-include 'conexion.php';
+$data = json_decode(file_get_contents("php://input"));
 
-$json = file_get_contents('php://input');
-$data = json_decode($json, true);
+// Verificamos que los datos esenciales no estén vacíos
+if (
+    !empty($data->nombreUsuario) &&
+    !empty($data->correo) &&
+    !empty($data->contrasena) &&
+    !empty($data->identificacion)
+) {
+    // 1. Preparar los datos (usando los nombres exactos que envía Flutter)
+    $nombreUsuario = $data->nombreUsuario;
+    $nombres = $data->nombres;
+    $apellidos = $data->apellidos;
+    $nombreCompleto = $data->nombreCompleto; // Ya viene concatenado de Flutter
+    $tipoDocumento = $data->tipoDocumento;
+    $identificacion = $data->identificacion;
+    $fechaNacimiento = $data->fechaNacimiento;
+    $correo = $data->correo;
+    $telefono = $data->telefono;
+    $idRol = $data->idRol; // Recibe el 1, 2 o 3 que configuramos
+    
+    // Encriptar contraseña (opcional, pero recomendado)
+    $contrasena = password_hash($data->contrasena, PASSWORD_BCRYPT);
 
-if (!$data) {
-    echo json_encode(["status" => "error", "message" => "No llegaron datos"]);
-    exit;
-}
+    // 2. Query de inserción ajustada a tu tabla 'usuario'
+    $query = "INSERT INTO usuario 
+              (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena, fechaNacimiento, telefono, id_rol) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-// Adaptamos los datos de Flutter a los nombres de TU tabla en phpMyAdmin
-$nombreUsuario   = $conexion->real_escape_string($data['nombreUsuario'] ?? '');
-$identificacion  = $conexion->real_escape_string($data['documento'] ?? ''); // Flutter envía 'documento'
-$nombreCompleto  = $conexion->real_escape_string(($data['nombres'] ?? '') . ' ' . ($data['apellidos'] ?? '')); // Unimos nombres y apellidos
-$tipoDocumento   = $conexion->real_escape_string($data['tipoDocumento'] ?? '');
-$correo          = $conexion->real_escape_string($data['correo'] ?? '');
-$contrasena      = password_hash($data['contrasena'] ?? '', PASSWORD_DEFAULT);
+    $stmt = $conn->prepare($query);
 
-// Ajusta esta consulta a los nombres exactos de la imagen que enviaste
-$sql = "INSERT INTO usuario (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena) 
-        VALUES ('$nombreUsuario', '$tipoDocumento', '$identificacion', '$nombreCompleto', '$correo', '$contrasena')";
-
-if ($conexion->query($sql) === TRUE) {
-    echo json_encode(["status" => "success", "message" => "Usuario registrado correctamente"]);
+    try {
+        if($stmt->execute([
+            $nombreUsuario, 
+            $tipoDocumento, 
+            $identificacion, 
+            $nombreCompleto, 
+            $correo, 
+            $contrasena, 
+            $fechaNacimiento, 
+            $telefono, 
+            $idRol
+        ])) {
+            http_response_code(200);
+            echo json_encode(array("status" => "success", "message" => "Usuario registrado correctamente."));
+        } else {
+            http_response_code(500);
+            echo json_encode(array("status" => "error", "message" => "No se pudo registrar el usuario."));
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        // Esto te ayudará a ver el error real en los logs de Clever Cloud
+        echo json_encode(array("status" => "error", "message" => $e->getMessage()));
+    }
 } else {
-    echo json_encode(["status" => "error", "message" => "Error en BD: " . $conexion->error]);
+    http_response_code(400);
+    echo json_encode(array("status" => "error", "message" => "Datos incompletos."));
 }
-
-$conexion->close();
 ?>
