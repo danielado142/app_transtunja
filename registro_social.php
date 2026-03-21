@@ -2,34 +2,41 @@
 // 1. IMPORTAR LA CONEXIÓN DE LA NUBE
 include 'conexion.php'; 
 
-// 2. CONFIGURAR CABECERAS PARA FLUTTER
+// 2. CONFIGURAR CABECERAS PARA FLUTTER (CORREGIDO)
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS"); // Agregamos GET y OPTIONS
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header('Content-Type: application/json; charset=utf-8');
 
-// 3. RECIBIR DATOS DE FLUTTER
+// 3. ✅ ESTO ES LO QUE FALTA PARA QUITAR EL BLOQUEO
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// 4. RECIBIR DATOS DE FLUTTER
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
 if ($data) {
-    $nombre = $data['nombre'];
-    $email = $data['email'];
-    $metodo = $data['metodo'];
+    // Usamos nombres que coincidan con tu base de datos
+    $nombre = isset($data['nombre']) ? $conexion->real_escape_string($data['nombre']) : '';
+    $email = isset($data['email']) ? $conexion->real_escape_string($data['email']) : '';
+    $metodo = isset($data['metodo']) ? $conexion->real_escape_string($data['metodo']) : 'google';
 
-    // NOTA: Revisa si tu tabla es 'usuario' o 'usuarios'. 
-    // En tus archivos anteriores era 'usuario'. Lo corregiré a 'usuario'.
-    
-    // Verificamos si el usuario ya existe por su correo (Usando la variable $conexion de tu conexion.php)
+    if (empty($email)) {
+        echo json_encode(["status" => "error", "message" => "El correo es obligatorio"]);
+        exit;
+    }
+
+    // Verificamos si el usuario ya existe
     $consulta = "SELECT * FROM usuario WHERE correo = '$email'";
     $resultado = $conexion->query($consulta);
 
     if ($resultado && $resultado->num_rows > 0) {
-        // Si ya existe
-        echo json_encode(["status" => "success", "message" => "Sesión iniciada con $metodo"]);
+        echo json_encode(["status" => "success", "message" => "Sesión iniciada"]);
     } else {
-        // Si es nuevo, lo insertamos
-        // Ajusté los nombres de columnas para que coincidan con 'nombre' y 'correo' de tus otros scripts
+        // Insertamos el nuevo usuario
         $sql = "INSERT INTO usuario (nombre, correo, metodo_registro) VALUES ('$nombre', '$email', '$metodo')";
         
         if ($conexion->query($sql) === TRUE) {
