@@ -1,25 +1,21 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
-
-// Llamamos al archivo que me acabas de mostrar
 include_once 'conexion.php'; 
 
 $data = json_decode(file_get_contents("php://input"));
 
-if ($data && !empty($data->nombreUsuario)) {
-    // Usamos $conexion (con x) porque así lo tienes en tu archivo de conexión
+if ($data) {
+    // Usamos los nombres de columnas exactos de tu base de datos: nombreUsuario, tipoDocumento, etc.
     $sql = "INSERT INTO usuario (nombreUsuario, tipoDocumento, identificacion, nombreCompleto, correo, contrasena, fechaNacimiento, telefono, id_rol) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     $stmt = $conexion->prepare($sql);
     
-    // Encriptamos para seguridad
+    // Encriptamos la clave
     $pass_hash = password_hash($data->contrasena, PASSWORD_BCRYPT);
 
-    // "ssssssssi" significa 8 textos (s) y 1 número entero (i) para el idRol
+    // "ssssssssi" -> 8 textos y 1 entero para idRol
     $stmt->bind_param("ssssssssi", 
         $data->nombreUsuario, 
         $data->tipoDocumento, 
@@ -29,18 +25,14 @@ if ($data && !empty($data->nombreUsuario)) {
         $pass_hash, 
         $data->fechaNacimiento, 
         $data->telefono, 
-        $data->idRol
+        $data->idRol // Tu Flutter ya envía el número 3
     );
 
     if($stmt->execute()) {
-        echo json_encode(["status" => "success", "message" => "¡Logrado! Usuario creado."]);
+        echo json_encode(["status" => "success", "message" => "Registro exitoso"]);
     } else {
         http_response_code(500);
-        echo json_encode(["status" => "error", "message" => "Error en la base: " . $stmt->error]);
+        echo json_encode(["status" => "error", "message" => $stmt->error]);
     }
-    $stmt->close();
-} else {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "message" => "Datos incompletos"]);
 }
-$conexion->close();
+?>
