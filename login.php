@@ -1,67 +1,76 @@
 <?php
-// Desactivar visualización de errores de texto para que no rompan el JSON
+// 1. Cabeceras CORS (Permite que la App de Flutter se conecte sin bloqueos)
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header('Content-Type: application/json; charset=utf-8');
+
+// Manejo de peticiones OPTIONS (Pre-flight)
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    exit;
+}
+
+// Desactivar errores visuales que corrompen el JSON
 error_reporting(0);
 ini_set('display_errors', 0);
-
-header('Content-Type: application/json');
 
 // Incluimos la conexión
 include 'conexion.php';
 
-// Verificamos que la conexión exista
-if (!$conn) {
-    echo json_encode(["status" => "error", "message" => "Error de conexión a BD"]);
+// Verificamos la conexión
+if (!$conexion) {
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos"]);
     exit;
 }
 
-// 1. CAPTURA DE DATOS (Ajustado a los nombres de Flutter)
-// Flutter envía: "correo" y "contrasena"
-$email = $_POST['correo'] ?? '';
-$password = $_POST['contrasena'] ?? '';
+// 2. CAPTURA DE DATOS JSON (Desde Flutter)
+$json = file_get_contents('php://input');
+$data = json_decode($json, true);
 
-// 2. VALIDACIÓN INICIAL
+$email = $data['correo'] ?? '';
+$password = $data['contrasena'] ?? '';
+
+// 3. VALIDACIÓN INICIAL
 if (empty($email) || empty($password)) {
     echo json_encode([
-        "status" => "error", 
+        "success" => false, 
         "message" => "Por favor complete todos los campos"
     ]);
     exit;
 }
 
 try {
-    // 3. CONSULTA (Ajustada a tu tabla 'usuario')
-    // Nota: He añadido 'id_rol' por si lo necesitas para la navegación en Flutter
-    $stmt = $conn->prepare("SELECT id_usuario, nombre, contrasena, id_rol FROM usuario WHERE correo = ? OR nombre_usuario = ?");
-    $stmt->bind_param("ss", $email, $email); // Permite loguear con correo o con el nickname
+    // 4. CONSULTA (Ajustada a tu SQL: nombreCompleto, id_rol, correo)
+    $stmt = $conexion->prepare("SELECT id_usuario, nombreCompleto, contrasena, id_rol FROM usuario WHERE correo = ?");
+    $stmt->bind_param("s", $email); 
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($user = $result->fetch_assoc()) {
         
-        // 4. VERIFICACIÓN DE CONTRASEÑA
-        // Si usas hash en el futuro cambia a: password_verify($password, $user['contrasena'])
+        // 5. VERIFICACIÓN DE CONTRASEÑA (Texto plano según tu DB actual)
         if ($password === $user['contrasena']) {
             echo json_encode([
-                "status" => "success",
-                "message" => "Bienvenido " . $user['nombre'],
+                "success" => true,
+                "message" => "Bienvenido " . $user['nombreCompleto'],
                 "userData" => [
                     "id" => $user['id_usuario'],
-                    "nombre" => $user['nombre'],
+                    "nombre" => $user['nombreCompleto'],
                     "rol" => $user['id_rol']
                 ]
             ]);
         } else {
-            echo json_encode(["status" => "error", "message" => "La contraseña es incorrecta"]);
+            echo json_encode(["success" => false, "message" => "La contraseña es incorrecta"]);
         }
     } else {
-        echo json_encode(["status" => "error", "message" => "El usuario o correo no existe"]);
+        echo json_encode(["success" => false, "message" => "El correo electrónico no está registrado"]);
     }
 
     $stmt->close();
 
 } catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => "Error interno: " . $e->getMessage()]);
+    echo json_encode(["success" => false, "message" => "Error interno del servidor"]);
 }
 
-$conn->close();
+$conexion->close();
 ?>
