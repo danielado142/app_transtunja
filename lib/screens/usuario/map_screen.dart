@@ -7,6 +7,7 @@ import '../../models/bus_stop_model.dart';
 import '../../models/destination_suggestion_model.dart';
 import '../../models/map_route_model.dart';
 import '../../models/map_summary_model.dart';
+import '../../models/route_model.dart';
 import '../../services/map_service.dart';
 import 'route_detail_screen.dart';
 
@@ -197,7 +198,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ],
                   ),
-                  // Gradiente superior
                   Positioned(
                     top: 0,
                     left: 0,
@@ -215,7 +215,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-                  // Buscador
                   Positioned(
                     top: 16,
                     left: 16,
@@ -224,7 +223,6 @@ class _MapScreenState extends State<MapScreen> {
                       onTap: () => _openDestinationSheet(context),
                     ),
                   ),
-                  // Chips de acceso rápido
                   Positioned(
                     top: 78,
                     left: 16,
@@ -254,7 +252,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-                  // Botón Mi Ubicación
                   Positioned(
                     right: 16,
                     bottom: 190,
@@ -267,7 +264,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-                  // Tarjeta Informativa inferior
                   Positioned(
                     left: 16,
                     right: 16,
@@ -278,14 +274,20 @@ class _MapScreenState extends State<MapScreen> {
                       routeName: routeName,
                       onGoToRoutes: widget.onGoToRoutes,
                       onDetails: () {
+                        final route = RouteModel(
+                          id: 'map_temp',
+                          name: routeName,
+                          stop: stopName,
+                          eta: etaText,
+                          status: 'Activa',
+                          tag: '',
+                          extra: '',
+                        );
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => RouteDetailScreen(
-                              routeName: routeName,
-                              stopName: stopName,
-                              etaText: etaText,
-                            ),
+                            builder: (_) => RouteDetailScreen(route: route),
                           ),
                         );
                       },

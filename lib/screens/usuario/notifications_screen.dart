@@ -280,8 +280,7 @@ class _NotifCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color:
-                  (notif.type == NotificationType.warning ||
+              color: (notif.type == NotificationType.warning ||
                       notif.type == NotificationType.important)
                   ? red.withOpacity(0.12)
                   : Colors.black12,
@@ -289,8 +288,7 @@ class _NotifCard extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color:
-                  (notif.type == NotificationType.warning ||
+              color: (notif.type == NotificationType.warning ||
                       notif.type == NotificationType.important)
                   ? red
                   : Colors.black87,

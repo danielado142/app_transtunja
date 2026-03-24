@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../models/route_model.dart';
+
 class RouteDetailScreen extends StatelessWidget {
-  final String routeName;
-  final String stopName;
-  final String etaText;
+  final RouteModel route;
 
   const RouteDetailScreen({
     super.key,
-    required this.routeName,
-    required this.stopName,
-    required this.etaText,
+    required this.route,
   });
 
   List<_Stop> _buildStops() {
-    final parts = routeName.split(' - ');
-    final origin = parts.isNotEmpty ? parts.first.trim() : routeName.trim();
+    final parts = route.name.split(' - ');
+    final origin = parts.isNotEmpty ? parts.first.trim() : route.name.trim();
     final destination = parts.length > 1 ? parts.last.trim() : '';
+    final currentStop = route.stop.trim();
 
     final List<_Stop> stops = [
       _Stop(
@@ -25,12 +24,12 @@ class RouteDetailScreen extends StatelessWidget {
       ),
     ];
 
-    if (stopName.trim().isNotEmpty &&
-        stopName.trim().toLowerCase() != origin.toLowerCase() &&
-        stopName.trim().toLowerCase() != destination.toLowerCase()) {
+    if (currentStop.isNotEmpty &&
+        currentStop.toLowerCase() != origin.toLowerCase() &&
+        currentStop.toLowerCase() != destination.toLowerCase()) {
       stops.add(
         _Stop(
-          name: stopName,
+          name: currentStop,
           info: 'Parada cercana',
           state: _StopState.current,
         ),
@@ -47,7 +46,7 @@ class RouteDetailScreen extends StatelessWidget {
       );
     }
 
-    if (stopName.trim().toLowerCase() == origin.toLowerCase()) {
+    if (currentStop.toLowerCase() == origin.toLowerCase()) {
       stops[0] = _Stop(
         name: origin,
         info: 'Parada actual',
@@ -66,7 +65,7 @@ class RouteDetailScreen extends StatelessWidget {
     }
 
     if (destination.isNotEmpty &&
-        stopName.trim().toLowerCase() == destination.toLowerCase()) {
+        currentStop.toLowerCase() == destination.toLowerCase()) {
       stops.clear();
       stops.add(
         _Stop(
@@ -91,8 +90,8 @@ class RouteDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     const red = Color(0xFFD10000);
 
-    final routeParts = routeName.split(' - ');
-    final origin = routeParts.isNotEmpty ? routeParts.first : routeName;
+    final routeParts = route.name.split(' - ');
+    final origin = routeParts.isNotEmpty ? routeParts.first : route.name;
     final destination = routeParts.length > 1 ? routeParts.last : '';
     final stops = _buildStops();
 
@@ -147,7 +146,7 @@ class RouteDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            routeName,
+                            route.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -175,12 +174,12 @@ class RouteDetailScreen extends StatelessWidget {
                             children: [
                               _InfoPill(
                                 icon: Icons.schedule,
-                                text: 'Próximo bus: $etaText',
+                                text: 'Próximo bus: ${route.eta}',
                                 color: red,
                               ),
                               _InfoPill(
                                 icon: Icons.place_outlined,
-                                text: 'Parada actual: $stopName',
+                                text: 'Parada actual: ${route.stop}',
                                 color: Colors.black87,
                                 light: true,
                               ),

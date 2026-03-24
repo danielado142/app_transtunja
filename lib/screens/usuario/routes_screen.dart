@@ -370,11 +370,7 @@ class _RouteCard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => RouteDetailScreen(
-                      routeName: route.name,
-                      stopName: route.stop,
-                      etaText: route.eta,
-                    ),
+                    builder: (_) => RouteDetailScreen(route: route),
                   ),
                 );
               },
