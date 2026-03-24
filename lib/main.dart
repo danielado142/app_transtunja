@@ -4,16 +4,17 @@ import 'package:firebase_core/firebase_core.dart';
 
 // --- TUS IMPORTS ---
 import 'pantalla_bienvenida.dart';
-// He ajustado las rutas según lo que se ve en tu explorador de archivos (image_2eb6a9.png)
 import 'package:app_transtunja/screens/login/login_screen.dart';
 import 'package:app_transtunja/screens/login/register_screen.dart';
 import 'package:app_transtunja/screens/login/role_selection_screen.dart';
-// IMPORTANTE: Verifica que dentro de este archivo la clase se llame EXACTAMENTE SmsVerificationScreen
 import 'package:app_transtunja/screens/login/verification_screen.dart';
 
 // --- OTROS IMPORTS ---
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
+
+// --- IMPORT DEL ADMINISTRADOR (Añadido) ---
+import 'package:app_transtunja/screens/administrador/login_admin.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +45,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
+      // La pantalla inicial sigue siendo Bienvenida
       home: const PantallaBienvenida(),
+
       onGenerateRoute: (settings) {
         final args = settings.arguments as Map<String, dynamic>? ?? {};
 
@@ -58,7 +61,7 @@ class MyApp extends StatelessWidget {
           return MaterialPageRoute(
             builder: (context) => SmsVerificationScreen(
               verificationId: args['verificationId'] ?? '',
-              userData: args, // Pasamos el mapa completo de datos
+              userData: args,
             ),
           );
         }
@@ -73,6 +76,11 @@ class MyApp extends StatelessWidget {
 
         if (settings.name == '/home_usuario') {
           return MaterialPageRoute(builder: (_) => const UserHomeScreen());
+        }
+
+        // --- RUTA AÑADIDA PARA EL ADMINISTRADOR ---
+        if (settings.name == '/login_admin') {
+          return MaterialPageRoute(builder: (_) => const LoginAdmin());
         }
 
         return null;

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+// Asegúrate de importar tus constantes para que ApiConfig funcione
+import 'package:app_transtunja/config/constants.dart';
 
+// --- MODELO ---
 class ParadaModel {
   final int? id;
   final String nombre;
@@ -34,85 +37,99 @@ class ParadaModel {
     );
   }
 
-  Map<String, String> toMap() {
+  // Cambiado a Map<String, dynamic> para soportar jsonEncode
+  Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id_parada': id.toString(),
+      if (id != null) 'id_parada': id,
       'nombre_parada': nombre,
       'referencia': referencia,
-      'latitud': latitud.toString(),
-      'longitud': longitud.toString(),
+      'latitud': latitud,
+      'longitud': longitud,
       'estado': estado,
     };
   }
 }
 
+// --- SERVICIO ---
 class ParadaService {
   final String baseUrl;
 
-  const ParadaService({required this.baseUrl});
+  ParadaService({required String baseUrl}) : baseUrl = baseUrl.trim();
 
+  // Función corregida para evitar el error de "Origin" y "No host specified"
   Uri _buildUri(String fileName) {
-    if (baseUrl.startsWith('http')) {
-      return Uri.parse('$baseUrl/$fileName');
-    }
-    return Uri.parse('${Uri.base.origin}$baseUrl/$fileName');
+    // Usamos ApiConfig.baseUrl o la baseUrl pasada al constructor
+    final String domain = ApiConfig.baseUrl.trim();
+
+    final String fullUrl =
+        domain.endsWith('/') ? '$domain$fileName' : '$domain/$fileName';
+
+    return Uri.parse(fullUrl);
   }
 
+  // 1. OBTENER PARADAS
   Future<List<ParadaModel>> obtenerParadas() async {
-    final response = await http.get(_buildUri('obtener_paradas.php'));
+    try {
+      final url = _buildUri('obtener_paradas.php');
+      final response = await http.get(url);
 
-    if (response.statusCode != 200) {
-      throw Exception('No se pudieron obtener las paradas.');
+      if (response.statusCode != 200) {
+        throw Exception('Error del servidor: ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return decoded.map((e) => ParadaModel.fromJson(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Error de conexión al obtener: $e');
     }
-
-    final decoded = jsonDecode(response.body);
-
-    if (decoded is List) {
-      return decoded.map((e) => ParadaModel.fromJson(e)).toList();
-    }
-
-    if (decoded is Map && decoded['data'] is List) {
-      return (decoded['data'] as List)
-          .map((e) => ParadaModel.fromJson(e))
-          .toList();
-    }
-
-    return [];
   }
 
+  // 2. GUARDAR PARADA (Modificado para enviar JSON real)
   Future<Map<String, dynamic>> guardarParada(ParadaModel parada) async {
-    final response = await http.post(
-      _buildUri('guardar_parada.php'),
-      body: parada.toMap(),
-    );
+    try {
+      final url = _buildUri('guardar_parada.php');
 
-    if (response.statusCode != 200) {
-      throw Exception('No se pudo guardar la parada.');
+      // IMPORTANTE: Tu PHP usa php://input, por eso enviamos jsonEncode
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type':
+              'application/json', // Notifica al servidor que va un JSON
+        },
+        body: jsonEncode(parada.toJson()), // Convertimos el objeto a texto JSON
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al guardar: ${response.statusCode}');
+      }
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      throw Exception('No se pudo guardar la parada: $e');
     }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-
-    return {'success': true};
   }
 
+  // 3. ELIMINAR PARADA
   Future<Map<String, dynamic>> eliminarParada(int idParada) async {
-    final response = await http.post(
-      _buildUri('eliminar_parada.php'),
-      body: {'id_parada': idParada.toString()},
-    );
+    try {
+      final url = _buildUri('eliminar_parada.php');
 
-    if (response.statusCode != 200) {
-      throw Exception('No se pudo eliminar la parada.');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id_parada': idParada}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al eliminar: ${response.statusCode}');
+      }
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      throw Exception('Error de conexión al eliminar: $e');
     }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-
-    return {'success': true};
   }
 }

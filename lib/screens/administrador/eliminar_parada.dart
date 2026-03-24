@@ -210,9 +210,8 @@ class _EliminarParadaPageState extends State<EliminarParadaPage> {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       side: BorderSide(
-                                        color: isSelected
-                                            ? rojo
-                                            : Colors.black12,
+                                        color:
+                                            isSelected ? rojo : Colors.black12,
                                         width: isSelected ? 1.4 : 1,
                                       ),
                                     ),
@@ -257,9 +256,9 @@ class _EliminarParadaPageState extends State<EliminarParadaPage> {
                                                   height: 22,
                                                   child:
                                                       CircularProgressIndicator(
-                                                        strokeWidth: 2.4,
-                                                        color: rojo,
-                                                      ),
+                                                    strokeWidth: 2.4,
+                                                    color: rojo,
+                                                  ),
                                                 )
                                               : const Icon(
                                                   Icons.delete_outline,
