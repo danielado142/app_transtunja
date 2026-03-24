@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
-
-import 'package:app_transtunja/services/parada_service.dart';
+import 'package:app_transtunja/screens/administrador/parada_service.dart';
 
 class EditarParadaPage extends StatefulWidget {
   const EditarParadaPage({super.key, this.apiBaseUrl = '/transtunja'});
@@ -19,8 +18,10 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   static const Color blanco = Color(0xFFFFFFFF);
   static const Color grisFondo = Color(0xFFF6F6F7);
   static const Color azul = Color(0xFF2563EB);
+  static const LatLng tunjaCenter = LatLng(5.5353, -73.3678);
 
   late final ParadaService _paradaService;
+  final MapController _mapController = MapController();
 
   bool _isLoading = true;
   List<ParadaModel> _paradas = [];
@@ -30,6 +31,12 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
     super.initState();
     _paradaService = ParadaService(baseUrl: widget.apiBaseUrl);
     _cargarParadas();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   void _showSnack(String texto, {bool isError = false}) {
@@ -49,6 +56,19 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
       setState(() {
         _paradas = data;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        if (_paradas.isNotEmpty) {
+          _mapController.move(
+            LatLng(_paradas.first.latitud, _paradas.first.longitud),
+            14,
+          );
+        } else {
+          _mapController.move(tunjaCenter, 14);
+        }
       });
     } catch (e) {
       _showSnack('Error cargando paradas: $e', isError: true);
@@ -77,6 +97,10 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final mapCenter = _paradas.isNotEmpty
+        ? LatLng(_paradas.first.latitud, _paradas.first.longitud)
+        : tunjaCenter;
+
     return Scaffold(
       backgroundColor: grisFondo,
       appBar: AppBar(
@@ -126,6 +150,47 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                   ),
                 ),
               ],
+            ),
+          ),
+          Container(
+            height: 320,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            decoration: BoxDecoration(
+              color: blanco,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.black12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: mapCenter,
+                  initialZoom: 14,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.transtunja.admin',
+                    tileProvider: CancellableNetworkTileProvider(),
+                  ),
+                  if (_paradas.isNotEmpty)
+                    MarkerLayer(
+                      markers: _paradas.map((parada) {
+                        return Marker(
+                          point: LatLng(parada.latitud, parada.longitud),
+                          width: 54,
+                          height: 54,
+                          child: GestureDetector(
+                            onTap: () => _abrirEditor(parada),
+                            child: const _ParadaPinIcon(size: 52),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -307,6 +372,10 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
       _referenciaCtrl.text = widget.parada.referencia;
       _selectedPoint = _originalPoint;
     });
+
+    if (_originalPoint != null) {
+      _mapController.move(_originalPoint!, 15);
+    }
   }
 
   Future<void> _guardarParada() async {
