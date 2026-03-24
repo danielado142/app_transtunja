@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-// IMPORTANTE: Esta es la línea que debe estar cargada correctamente
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:app_transtunja/services/routing_service.dart';
 import 'package:app_transtunja/services/ruta_service.dart';
+import 'package:app_transtunja/config/constants.dart';
 
 class CrearRuta extends StatefulWidget {
   const CrearRuta({super.key, this.apiBaseUrl = '/transtunja'});
@@ -58,7 +60,7 @@ class _CrearRutaState extends State<CrearRuta> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
-        backgroundColor: isError ? Colors.red : null,
+        backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
   }
@@ -81,7 +83,9 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       _scheduleRouteRebuild();
     } catch (e) {
-      _showSnack('No se pudo agregar el punto: $e', isError: true);
+      // Si falla el snap, agregamos el punto original para no bloquear al usuario
+      setState(() => _waypoints.add(point));
+      _scheduleRouteRebuild();
     }
   }
 
@@ -97,15 +101,15 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       _scheduleRouteRebuild();
     } catch (e) {
-      _showSnack('No se pudo mover el marcador: $e', isError: true);
+      setState(() {
+        _waypoints[index] = point;
+        _selectedMarkerIndex = null;
+      });
+      _scheduleRouteRebuild();
     }
   }
 
   void _removePoint(int index) {
-    if (_waypoints.length <= 2) {
-      _showSnack('La ruta debe tener al menos 2 puntos.', isError: true);
-      return;
-    }
     setState(() {
       _waypoints.removeAt(index);
       _selectedMarkerIndex = null;
@@ -126,9 +130,8 @@ class _CrearRutaState extends State<CrearRuta> {
       return;
     }
     final requestId = ++_routeRequestId;
-    setState(() {
-      _isRouting = true;
-    });
+    setState(() => _isRouting = true);
+
     try {
       final polyline = await _routingService.buildRoadPolyline(_waypoints);
       if (!mounted || requestId != _routeRequestId) return;
@@ -140,12 +143,9 @@ class _CrearRutaState extends State<CrearRuta> {
       setState(() {
         _polylinePoints = List<LatLng>.from(_waypoints);
       });
-      _showSnack('Trazado manual (ajuste a vía fallido).', isError: true);
     } finally {
       if (!mounted || requestId != _routeRequestId) return;
-      setState(() {
-        _isRouting = false;
-      });
+      setState(() => _isRouting = false);
     }
   }
 
@@ -159,29 +159,54 @@ class _CrearRutaState extends State<CrearRuta> {
     });
   }
 
+  // --- FUNCIÓN CORREGIDA PARA XAMPP ---
   Future<void> _guardarRuta() async {
     if (_nombreCtrl.text.isEmpty || _waypoints.length < 2) {
       _showSnack('Nombre y al menos 2 puntos requeridos.', isError: true);
       return;
     }
+
     setState(() => _isSaving = true);
+
     try {
       final routeId = 'R-${DateTime.now().millisecondsSinceEpoch}';
-      final resultado = await _rutaService.guardarRuta(
-        routeId: routeId,
-        nombre: _nombreCtrl.text,
-        destino: _destinoCtrl.text,
-        waypoints: _waypoints,
-        polylinePoints: _polylinePoints.isNotEmpty
-            ? _polylinePoints
-            : _waypoints,
+
+      // Formateamos la línea azul (recorrido detallado)
+      final List<List<double>> formatoCoordenadas =
+          (_polylinePoints.isNotEmpty ? _polylinePoints : _waypoints)
+              .map((p) => [p.latitude, p.longitude])
+              .toList();
+
+      // Formateamos los puntos rojos (marcadores de parada)
+      final List<List<double>> formatoWaypoints =
+          _waypoints.map((p) => [p.latitude, p.longitude]).toList();
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/guardar_ruta.php');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id_ruta': routeId,
+          'nombre': _nombreCtrl.text,
+          'destino': _destinoCtrl.text,
+          'coordenadas': formatoCoordenadas,
+          'waypoitns': formatoWaypoints, // Ortografía igual a tu DB
+        }),
       );
-      if (mounted && resultado['success'] == true) {
-        _showSnack('Ruta guardada en XAMPP.');
-        Navigator.pop(context, true);
+
+      if (mounted) {
+        final resultado = jsonDecode(response.body);
+        if (response.statusCode == 200 && resultado['status'] == 'success') {
+          _showSnack('¡Ruta creada y guardada en XAMPP!');
+          Navigator.pop(context, true);
+        } else {
+          _showSnack('Error: ${resultado['message'] ?? 'Error en el servidor'}',
+              isError: true);
+        }
       }
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      _showSnack('Error de conexión: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -196,6 +221,7 @@ class _CrearRutaState extends State<CrearRuta> {
         child: Column(
           children: [
             _buildTopPanel(),
+            if (_isRouting) const LinearProgressIndicator(minHeight: 2),
             const SizedBox(height: 12),
             Expanded(
               child: ClipRRect(
@@ -212,7 +238,6 @@ class _CrearRutaState extends State<CrearRuta> {
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.transtunja.admin',
-                      // Aquí se usa el componente del paquete instalado
                       tileProvider: CancellableNetworkTileProvider(),
                     ),
                     if (_polylinePoints.length >= 2)
@@ -235,11 +260,8 @@ class _CrearRutaState extends State<CrearRuta> {
                           width: 40,
                           height: 40,
                           child: GestureDetector(
-                            onTap: () => setState(
-                              () => _selectedMarkerIndex = isSelected
-                                  ? null
-                                  : index,
-                            ),
+                            onTap: () => setState(() => _selectedMarkerIndex =
+                                isSelected ? null : index),
                             onLongPress: () => _removePoint(index),
                             child: Icon(
                               Icons.location_on,
@@ -271,11 +293,13 @@ class _CrearRutaState extends State<CrearRuta> {
           children: [
             TextField(
               controller: _nombreCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre Ruta'),
+              decoration: const InputDecoration(
+                  labelText: 'Nombre Ruta', prefixIcon: Icon(Icons.route)),
             ),
             TextField(
               controller: _destinoCtrl,
-              decoration: const InputDecoration(labelText: 'Destino Final'),
+              decoration: const InputDecoration(
+                  labelText: 'Destino Final', prefixIcon: Icon(Icons.flag)),
             ),
           ],
         ),
@@ -288,7 +312,7 @@ class _CrearRutaState extends State<CrearRuta> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: _clearForm,
+            onPressed: _isSaving ? null : _clearForm,
             child: const Text('Limpiar'),
           ),
         ),
@@ -301,7 +325,11 @@ class _CrearRutaState extends State<CrearRuta> {
               foregroundColor: Colors.white,
             ),
             child: _isSaving
-                ? const CircularProgressIndicator()
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
                 : const Text('Guardar en BD'),
           ),
         ),
