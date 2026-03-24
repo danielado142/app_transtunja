@@ -30,7 +30,9 @@ class _MapaAdminState extends State<MapaAdmin> {
   void didUpdateWidget(MapaAdmin oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.puntosIniciales != widget.puntosIniciales) {
-      _puntos = List<LatLng>.from(widget.puntosIniciales);
+      setState(() {
+        _puntos = List<LatLng>.from(widget.puntosIniciales);
+      });
     }
   }
 
@@ -53,10 +55,12 @@ class _MapaAdminState extends State<MapaAdmin> {
         },
       ),
       children: [
+        // --- AQUÍ ESTÁ EL CAMBIO PARA QUE CARGUE EL MAPA ---
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.transtunja.admin',
+          userAgentPackageName: 'com.transtunja.app', // ID de tu aplicación
         ),
+        // --------------------------------------------------
         PolylineLayer(
           polylines: [
             Polyline(

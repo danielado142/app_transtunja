@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+// 1. IMPORTANTE: Asegúrate de que la ruta sea la correcta según tu proyecto
+import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({super.key});
 
   @override
   State<DriverVerificationScreen> createState() =>
-      _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7();
+      _DriverVerificationScreenState();
 }
 
-class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
-    extends State<DriverVerificationScreen> {
+class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
   final String _codigoCorrecto = "654321";
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   final List<TextEditingController> _controllers = List.generate(
@@ -27,10 +28,8 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
   void _validarCodigo() {
     String codigoIngresado = "";
     for (var controller in _controllers) {
-      codigoIngresado += controller.text.trim().replaceAll(
-        RegExp(r'[^0-9]'),
-        '',
-      );
+      codigoIngresado +=
+          controller.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
     }
 
     if (codigoIngresado == _codigoCorrecto) {
@@ -40,29 +39,23 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
     }
   }
 
-  // --- ALERTA REDISEÑADA ESTILO ADMINISTRADOR ---
   void _mostrarExito() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFDF2F2), // Fondo sutil
+        backgroundColor: const Color(0xFFFDF2F2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Ícono de auto en verde para indicar éxito
             const Icon(Icons.directions_car, color: Colors.green, size: 80),
             const SizedBox(height: 25),
             const Text(
               '¡Código Correcto!',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             const Text(
@@ -76,12 +69,26 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
         actions: [
           Center(
             child: TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                // 2. NAVEGACIÓN HACIA EL HOME
+                // Cerramos el diálogo primero
+                Navigator.pop(context);
+
+                // Vamos al Home y limpiamos la pila para que no pueda volver atrás al login
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HomeConductor(
+                        nombreConductor: "Conductor Verificado"),
+                  ),
+                  (route) => false,
+                );
+              },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B), // Rojo oscuro para el botón
+                  color: Color(0xFFC0392B),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -92,12 +99,12 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
     );
   }
 
+  // ... (El resto de tus métodos _mostrarError y build se mantienen igual)
   void _mostrarError() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Código de conductor incorrecto."),
-        backgroundColor: Colors.red,
-      ),
+          content: Text("Código de conductor incorrecto."),
+          backgroundColor: Colors.red),
     );
     for (var c in _controllers) c.clear();
     _focusNodes[0].requestFocus();
@@ -108,47 +115,34 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Verificación Conductor"),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-      ),
+          title: const Text("Verificación Conductor"),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          foregroundColor: Colors.black),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             children: [
-              const Text(
-                'Seguridad Conductor',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
+              const Text('Seguridad Conductor',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 40),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) => _buildOtpBox(index)),
-              ),
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(6, (index) => _buildOtpBox(index))),
               const SizedBox(height: 50),
               ElevatedButton(
                 onPressed: _validarCodigo,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFF2ECC71,
-                  ), // Color verde conductor
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 100,
-                    vertical: 15,
-                  ),
+                  backgroundColor: const Color(0xFF2ECC71),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 100, vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
+                      borderRadius: BorderRadius.circular(30)),
                 ),
-                child: const Text(
-                  'Verificar',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: const Text('Verificar',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -169,9 +163,9 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
         maxLength: 1,
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         decoration: InputDecoration(
-          counterText: '',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+            counterText: '',
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
         onChanged: (value) {
           if (value.isNotEmpty && index < 5) {
             _focusNodes[index + 1].requestFocus();
