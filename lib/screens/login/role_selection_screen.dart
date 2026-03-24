@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 
-// --- IMPORTS DE LAS INTERFACES DESTINO ---
-import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
-// IMPORTANTE: Importamos la pantalla del PIN
-import 'package:app_transtunja/screens/administrador/admin_verification_screen.dart';
+import '../administrador/admin_verification_screen.dart';
 import '../conductor/verificacion_conductor.dart';
-import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
 
   const RoleSelectionScreen({super.key, required this.userData});
 
-  // --- CORRECCIÓN: Ahora manda a la Verificación de PIN, no a la alerta ---
   void _goToAdmin(BuildContext context) {
     Navigator.push(
       context,
@@ -27,51 +22,53 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // --- ESTA FUNCIÓN DE USUARIO SE MANTIENE IGUAL ---
+  // --- NUEVA ALERTA PARA EL ROL DE USUARIO ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFDF2F2),
+        backgroundColor: const Color(
+          0xFFFDF2F2,
+        ), // Fondo sutil igual que los otros
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 10),
-            Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
-            SizedBox(height: 25),
-            Text(
+            const SizedBox(height: 10),
+            // Ícono de persona para el Usuario
+            const Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
+            const SizedBox(height: 25),
+            const Text(
               '¡Acceso Confirmado!',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
-            SizedBox(height: 10),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'Has ingresado como Pasajero.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 17, color: Colors.black54),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
           ],
         ),
         actions: [
           Center(
             child: TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UserHomeScreen(),
-                  ),
-                );
+                Navigator.pop(context); // Cierra la alerta
+                Navigator.pushReplacementNamed(context, '/mapa_pasajero');
               },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B),
+                  color: Color(0xFFC0392B), // Rojo oscuro coherente
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -84,9 +81,6 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String nombre =
-        userData['nombreUsuario'] ?? userData['nombres'] ?? 'Usuario';
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -104,7 +98,7 @@ class RoleSelectionScreen extends StatelessWidget {
               child: SafeArea(
                 child: Center(
                   child: Text(
-                    '¿Qué rol tendrás hoy,\n$nombre?',
+                    '¿Qué rol tendrás hoy,\n${userData['nombreUsuario'] ?? 'Usuario'}?',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -123,7 +117,6 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.security,
                     label: 'Administrador',
                     color: const Color(0xFFF39C12),
-                    // AQUÍ ESTÁ EL CAMBIO CLAVE:
                     onTap: () => _goToAdmin(context),
                   ),
                   const SizedBox(height: 30),
@@ -138,7 +131,8 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
-                    onTap: () => _showUserAlert(context),
+                    onTap: () =>
+                        _showUserAlert(context), // <--- Funcionalidad añadida
                   ),
                 ],
               ),

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// Asegúrate de que esta ruta sea la correcta en tu proyecto
-import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
   const DriverVerificationScreen({super.key});
@@ -27,64 +25,64 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
   }
 
   void _validarCodigo() {
-    String codigoIngresado = _controllers.map((e) => e.text).join();
+    String codigoIngresado = "";
+    for (var controller in _controllers) {
+      codigoIngresado += controller.text.trim().replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
+    }
+
     if (codigoIngresado == _codigoCorrecto) {
-      _mostrarAlertaExito();
+      _mostrarExito();
     } else {
       _mostrarError();
     }
   }
 
-  void _mostrarAlertaExito() {
+  // --- ALERTA REDISEÑADA ESTILO ADMINISTRADOR ---
+  void _mostrarExito() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFDF2F2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        backgroundColor: const Color(0xFFFDF2F2), // Fondo sutil
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 15),
-            const Icon(Icons.directions_car, color: Colors.green, size: 85),
+            const SizedBox(height: 10),
+            // Ícono de auto en verde para indicar éxito
+            const Icon(Icons.directions_car, color: Colors.green, size: 80),
             const SizedBox(height: 25),
             const Text(
-              '¡Acceso Confirmado!',
+              '¡Código Correcto!',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 10),
             const Text(
-              'Has ingresado como Conductor del sistema.',
+              'Acceso como Conductor.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+              style: TextStyle(fontSize: 17, color: Colors.black54),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
           ],
         ),
         actions: [
           Center(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const HomeConductor(nombreConductor: "Conductor"),
-                    ),
-                    (route) => false,
-                  );
-                },
-                child: const Text(
-                  "Aceptar",
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.green, // Texto en verde para combinar
-                    fontWeight: FontWeight.bold,
-                  ),
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Aceptar",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFFC0392B), // Rojo oscuro para el botón
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -99,10 +97,9 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
       const SnackBar(
         content: Text("Código de conductor incorrecto."),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
       ),
     );
-    for (var controller in _controllers) controller.clear();
+    for (var c in _controllers) c.clear();
     _focusNodes[0].requestFocus();
   }
 
@@ -111,75 +108,45 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: const Text("Verificación Conductor"),
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black,
-            size: 22,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Verificación Conductor",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        centerTitle: true,
+        foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25.0),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
             children: [
-              const SizedBox(height: 40),
               const Text(
                 'Seguridad Conductor',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Ingresa el código de 6 dígitos para continuar',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 50),
-              // FILA DE CUADRITOS REDONDEADOS (DISEÑO IGUAL AL DE ADMIN)
+              const SizedBox(height: 40),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(6, (index) => _buildOtpBox(index)),
               ),
-              const SizedBox(height: 60),
-              // BOTÓN ESTILO "CÁPSULA" EN COLOR VERDE
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: _validarCodigo,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFF2ECC71,
-                    ), // Tu verde original
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+              const SizedBox(height: 50),
+              ElevatedButton(
+                onPressed: _validarCodigo,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(
+                    0xFF2ECC71,
+                  ), // Color verde conductor
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 100,
+                    vertical: 15,
                   ),
-                  child: const Text(
-                    'Verificar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  'Verificar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -191,37 +158,30 @@ class _Dr3t24NpUrJMNunMMASmhAM953bFGeLXzN7
   }
 
   Widget _buildOtpBox(int index) {
-    return Container(
-      width: 50,
-      height: 65,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade400, width: 1),
-      ),
-      child: Center(
-        child: TextField(
-          controller: _controllers[index],
-          focusNode: _focusNodes[index],
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          maxLength: 1,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          decoration: const InputDecoration(
-            counterText: '',
-            border: InputBorder.none,
-          ),
-          onChanged: (value) {
-            if (value.isNotEmpty && index < 5) {
-              _focusNodes[index + 1].requestFocus();
-            } else if (value.isEmpty && index > 0) {
-              _focusNodes[index - 1].requestFocus();
-            }
-            if (value.length == 1 && index == 5) {
-              _validarCodigo();
-            }
-          },
+    return SizedBox(
+      width: 45,
+      height: 55,
+      child: TextField(
+        controller: _controllers[index],
+        focusNode: _focusNodes[index],
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.number,
+        maxLength: 1,
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        decoration: InputDecoration(
+          counterText: '',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
+        onChanged: (value) {
+          if (value.isNotEmpty && index < 5) {
+            _focusNodes[index + 1].requestFocus();
+          } else if (value.isEmpty && index > 0) {
+            _focusNodes[index - 1].requestFocus();
+          }
+          if (value.length == 1 && index == 5) {
+            _validarCodigo();
+          }
+        },
       ),
     );
   }

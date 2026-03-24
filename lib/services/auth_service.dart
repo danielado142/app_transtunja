@@ -17,15 +17,10 @@ class AuthService {
         )
       : GoogleSignIn();
 
-  // ✅ Headers globales corregidos para burlar el bloqueo de InfinityFree
+  // ✅ Headers limpios para Clever Cloud (Sin bloqueos de InfinityFree)
   Map<String, String> get _headers => {
     "Content-Type": "application/json",
     "Accept": "application/json",
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept-Language": "es-ES,es;q=0.9",
-    "Origin": "https://transtunja-app.infinityfree.me",
-    "Referer": "https://transtunja-app.infinityfree.me/",
   };
 
   // --- LOGIN TRADICIONAL ---
@@ -43,9 +38,9 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200 && !response.body.contains("<html>")) {
+      if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['status'] == 'success' || data['success'] == true;
+        return data['status'] == 'success';
       }
       return false;
     } catch (e) {
@@ -67,6 +62,7 @@ class AuthService {
         phoneNumber: telFormateado,
         verificationCompleted: (PhoneAuthCredential cred) async {
           await _auth.signInWithCredential(cred);
+          // Al completar SMS, insertamos en MySQL de la nube
           await insertarUsuarioMySQL(userData);
           if (context.mounted) {
             Navigator.pushReplacementNamed(context, '/mapa_pasajero');
@@ -74,9 +70,11 @@ class AuthService {
         },
         verificationFailed: (e) {
           debugPrint("❌ Error SMS Firebase: ${e.code}");
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Error SMS: ${e.message}")));
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("Error SMS: ${e.message}")));
+          }
         },
         codeSent: (id, token) {
           Navigator.pushNamed(
@@ -92,7 +90,7 @@ class AuthService {
     }
   }
 
-  // --- INSERTAR EN MYSQL (INFINITYFREE) ---
+  // --- INSERTAR EN MYSQL (CLEVER CLOUD) ---
   Future<bool> insertarUsuarioMySQL(Map<String, dynamic> datos) async {
     try {
       final response = await http
@@ -103,7 +101,7 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200 && !response.body.contains("<html>")) {
+      if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['status'] == 'success';
       }
@@ -117,7 +115,7 @@ class AuthService {
   // --- GOOGLE SIGN IN ---
   Future<UserCredential?> signInWithGoogle(BuildContext context) async {
     try {
-      await _googleSignIn.signOut(); // Limpiar caché
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) return null;
@@ -135,7 +133,6 @@ class AuthService {
       User? user = userCredential.user;
 
       if (user != null) {
-        // Sincronización con el servidor
         await _sincronizarConServidor(user);
 
         if (context.mounted) {
@@ -157,35 +154,26 @@ class AuthService {
       return userCredential;
     } catch (e) {
       debugPrint("Error Google: $e");
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al iniciar con Google: $e")),
-        );
-      }
       return null;
     }
   }
 
-  // --- SINCRONIZACIÓN GOOGLE A MYSQL ---
   Future<void> _sincronizarConServidor(User user) async {
     try {
-      await http
-          .post(
-            Uri.parse('${ApiConfig.baseUrl}/auth_google.php'),
-            headers: _headers,
-            body: jsonEncode({
-              "nombre": user.displayName ?? "Usuario Google",
-              "email": user.email,
-              "google_id": user.uid,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/auth_google.php'),
+        headers: _headers,
+        body: jsonEncode({
+          "nombre": user.displayName ?? "Usuario Google",
+          "email": user.email,
+          "google_id": user.uid,
+        }),
+      );
     } catch (e) {
-      debugPrint("Error sincronización servidor: $e");
+      debugPrint("Error sincronización: $e");
     }
   }
 
-  // --- CERRAR SESIÓN ---
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();
