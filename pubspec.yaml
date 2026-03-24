@@ -4,7 +4,7 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.10.4 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -28,7 +28,7 @@ dependencies:
   # Utilidades
   intl: ^0.20.2
   url_launcher: ^6.2.6
-  material_color_utilities: ^0.11.1
+  material_color_utilities: ^0.13.0
 
 dev_dependencies:
   flutter_test:

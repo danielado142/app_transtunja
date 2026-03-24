@@ -3,11 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// ✅ Importaciones corregidas
+// ✅ Importaciones mantenidas
 import 'package:app_transtunja/config/constants.dart';
 import 'register_screen.dart';
 import 'recuperacion_password.dart';
-// ✅ Asegúrate de que la ruta sea la correcta para tu proyecto
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,8 +19,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // ✅ Instancia de AuthService para usar sus métodos
   final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
@@ -46,38 +43,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
+    // ✅ La URL ahora usa ApiConfig que apunta a Hostinger
     final String urlApi = '${ApiConfig.baseUrl}/login.php';
 
     try {
       final response = await http
           .post(
             Uri.parse(urlApi),
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              // ✅ DISFRAZ COMPLETO PARA INFINITYFREE
-              "User-Agent":
-                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Accept-Language": "es-ES,es;q=0.9",
-              "Origin": "https://transtunja-app.infinityfree.me",
-              "Referer": "https://transtunja-app.infinityfree.me/",
-            },
+            headers: {"Content-Type": "application/json"},
             body: jsonEncode({
               "correo": _emailController.text.trim(),
               "contrasena": _passwordController.text.trim(),
             }),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(
+            const Duration(seconds: 15),
+          ); // Un poco más de tiempo por ser nube
 
-      // Verificamos si la respuesta es JSON válido
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
         if (!mounted) return;
+
+        // ✅ CORRECCIÓN: Usamos 'user' que es como responde tu PHP
         Navigator.pushReplacementNamed(
           context,
           '/role_selection',
-          arguments: data['userData'],
+          arguments: data['user'],
         );
       } else {
         if (!mounted) return;
@@ -87,17 +79,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-
-      // Si el error contiene "HTML", es que el bloqueo de InfinityFree persiste
-      String errorMsg = e.toString();
-      if (errorMsg.contains("html") || errorMsg.contains("SyntaxError")) {
-        errorMsg = "El servidor gratuito bloqueó la conexión (Seguridad AES).";
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $errorMsg")));
-      debugPrint("Error detallado: $e");
+      // ✅ Mensaje actualizado (ya no menciona XAMPP)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error de conexión con el servidor: $e")),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -112,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: <Widget>[
             const SizedBox(height: 100),
-            // --- CONTENEDOR DE FORMULARIO ---
+            // --- TU DISEÑO ORIGINAL SE MANTIENE ---
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 25.0,
@@ -163,7 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 15),
 
-            // --- RECUÉRDAME ---
             Row(
               children: [
                 Checkbox(
@@ -176,7 +160,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 15),
 
-            // --- BOTÓN INICIAR SESIÓN ---
             _isLoading
                 ? const CircularProgressIndicator(color: Colors.red)
                 : ElevatedButton(
@@ -199,7 +182,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
             const SizedBox(height: 15),
 
-            // --- BOTÓN GOOGLE ---
             ElevatedButton.icon(
               icon: Image.asset(
                 'assets/images/google.png',
@@ -212,7 +194,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 final userCredential = await _authService.signInWithGoogle(
                   context,
                 );
-
                 if (userCredential != null && mounted) {
                   debugPrint(
                     "Login exitoso con Google: ${userCredential.user?.email}",
