@@ -1,44 +1,26 @@
 {
   "project_info": {
-    "project_number": "497369853822",
-    "project_id": "transtunja",
-    "storage_bucket": "transtunja.firebasestorage.app"
+    "project_number": "290956858498",
+    "project_id": "fisica-f4672",
+    "storage_bucket": "fisica-f4672.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:497369853822:android:d371f4a8f88beb2bd80d2f",
+        "mobilesdk_app_id": "1:290956858498:android:73f11339e3432eb4c0109b",
         "android_client_info": {
           "package_name": "com.transtunja.app.v2"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "497369853822-7qvgg9vgkocem2hecnq7bocd0av29sd5.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.transtunja.app.v2",
-            "certificate_hash": "72f17238538203ceb02585ef8374efae030f99f8"
-          }
-        },
-        {
-          "client_id": "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBNxiUPrgkOJnQHagRdFhMbUjDqR1LWl9Y"
+          "current_key": "AIzaSyAtLYw9lLbIcI_-PKfd03p2rY379FUKIP0"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "497369853822-0isc65qnt3kifgulabqklbdra3983mdk.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
