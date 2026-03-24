@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
-// Asegúrate de que estos nombres de archivo coincidan con los que tienes en VS Code
 import 'package:app_transtunja/screens/administrador/crear_ruta.dart';
 import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
+import 'package:app_transtunja/screens/administrador/gestion_paradas.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
+
+  static const Color colorRojoApp = Color(0xFFD10000);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.red,
+        backgroundColor: colorRojoApp,
         centerTitle: true,
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/images/logo.png', // cambia esta ruta por la real de tu logo
+            fit: BoxFit.contain,
+          ),
+        ),
         title: const Text(
           'ADMIN DASHBOARD',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        leading: const BackButton(color: Colors.white),
       ),
       backgroundColor: const Color(0xffefefef),
       body: Center(
@@ -30,6 +39,7 @@ class AdminDashboard extends StatelessWidget {
                 label: const Text('Crear ruta'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 50),
                 ),
                 onPressed: () {
@@ -45,16 +55,32 @@ class AdminDashboard extends StatelessWidget {
                 label: const Text('Historial de rutas'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 50),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // Aquí llamamos al historial pasando el parámetro que pide
                       builder: (_) =>
                           const HistorialRutas(apiBaseUrl: '/transtunja'),
                     ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.location_on),
+                label: const Text('Gestión de paradas'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorRojoApp,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GestionParadas()),
                   );
                 },
               ),

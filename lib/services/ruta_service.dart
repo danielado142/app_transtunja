@@ -31,6 +31,7 @@ bool _pickBool(Map<String, dynamic> json, List<String> keys) {
 
     if (value is String) {
       final normalized = value.toLowerCase().trim();
+
       if (normalized == '1' ||
           normalized == 'true' ||
           normalized == 'activo' ||
@@ -39,13 +40,16 @@ bool _pickBool(Map<String, dynamic> json, List<String> keys) {
           normalized == 'habilitado') {
         return true;
       }
+
       if (normalized == '0' ||
           normalized == 'false' ||
           normalized == 'inactivo' ||
           normalized == 'inactiva' ||
           normalized == 'deshabilitada' ||
           normalized == 'deshabilitado' ||
-          normalized == 'no activo') {
+          normalized == 'no activo' ||
+          normalized == 'eliminada' ||
+          normalized == 'eliminado') {
         return false;
       }
     }
@@ -232,7 +236,14 @@ class RouteListItem {
       nombre: _pickString(json, ['nombre', 'nombre_ruta', 'ruta_nombre']),
       destino: _pickString(json, ['destino', 'destino_ruta']),
       habilitada: _pickBool(json, ['habilitada', 'activo', 'activa', 'estado']),
-      fecha: _pickNullableString(json, ['fecha', 'created_at', 'updated_at']),
+      fecha: _pickNullableString(json, [
+        'fecha_eliminacion',
+        'deleted_at',
+        'fecha_creacion',
+        'created_at',
+        'updated_at',
+        'fecha',
+      ]),
       coordenadas: _pickString(json, ['coordenadas', 'ruta', 'polyline']),
     );
   }
@@ -255,10 +266,17 @@ class RutaService {
   Future<List<RouteListItem>> fetchRoutes() async {
     final uri = Uri.parse('$baseUrl/$_listarEndpoint');
 
-    final response = await _client.get(
+    http.Response response = await _client.get(
       uri,
       headers: const {'Accept': 'application/json'},
     );
+
+    if (response.statusCode != 200 || response.body.trim().isEmpty) {
+      response = await _client.post(
+        uri,
+        headers: const {'Accept': 'application/json'},
+      );
+    }
 
     if (response.statusCode != 200) {
       throw Exception('No se pudo cargar el historial de rutas.');
