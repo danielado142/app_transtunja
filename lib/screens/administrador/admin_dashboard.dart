@@ -1,91 +1,228 @@
 import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/administrador/crear_ruta.dart';
-import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
 import 'package:app_transtunja/screens/administrador/gestion_paradas.dart';
+import 'package:app_transtunja/screens/administrador/gestion_conductores.dart';
+import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  static const Color colorRojoApp = Color(0xFFD10000);
+  static const Color colorFondo = Color(0xFFF6F6F7);
+
+  int _currentIndex = 0;
+
+  String get _appBarTitle {
+    switch (_currentIndex) {
+      case 1:
+        return 'CREAR RUTA';
+      case 2:
+        return 'PARADAS';
+      case 3:
+        return 'CONDUCTORES';
+      case 4:
+        return 'PERFIL';
+      default:
+        return 'ADMINISTRADOR';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: colorFondo,
+      appBar: AppBar(
+        backgroundColor: colorRojoApp,
+        centerTitle: true,
+        elevation: 0,
+        title: Text(
+          _appBarTitle,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: const [
+          _AdminHomeView(),
+          CrearRuta(),
+          GestionParadas(),
+          GestionConductores(),
+          _PerfilView(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: colorRojoApp,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        showUnselectedLabels: true,
+        selectedFontSize: 13,
+        unselectedFontSize: 12,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w800,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+        ),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_alt_outlined, size: 24),
+            activeIcon: Icon(Icons.people_alt_rounded, size: 28),
+            label: 'Admin',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.alt_route_outlined, size: 24),
+            activeIcon: Icon(Icons.alt_route_rounded, size: 28),
+            label: 'Rutas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.location_on_outlined, size: 24),
+            activeIcon: Icon(Icons.location_on_rounded, size: 28),
+            label: 'Paradas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.drive_eta_outlined, size: 24),
+            activeIcon: Icon(Icons.drive_eta_rounded, size: 28),
+            label: 'Conductores',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline, size: 24),
+            activeIcon: Icon(Icons.person, size: 28),
+            label: 'Perfil',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminHomeView extends StatelessWidget {
+  const _AdminHomeView();
 
   static const Color colorRojoApp = Color(0xFFD10000);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: colorRojoApp,
-        centerTitle: true,
-        leadingWidth: 60,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset(
-            'assets/images/logo.png', // cambia esta ruta por la real de tu logo
-            fit: BoxFit.contain,
-          ),
-        ),
-        title: const Text(
-          'ADMIN DASHBOARD',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Crear ruta'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CrearRuta()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.history),
+              label: const Text('Historial de rutas'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const HistorialRutas(apiBaseUrl: '/transtunja'),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.location_on),
+              label: const Text('Gestión de paradas'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorRojoApp,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GestionParadas()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.person),
+              label: const Text('Gestión de conductores'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const GestionConductores(),
+                  ),
+                );
+              },
+            ),
+            const Spacer(),
+            Center(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.82,
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
         ),
       ),
-      backgroundColor: const Color(0xffefefef),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text('Crear ruta'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CrearRuta()),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.history),
-                label: const Text('Historial de rutas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const HistorialRutas(apiBaseUrl: '/transtunja'),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.location_on),
-                label: const Text('Gestión de paradas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorRojoApp,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GestionParadas()),
-                  );
-                },
-              ),
-            ],
-          ),
+    );
+  }
+}
+
+class _PerfilView extends StatelessWidget {
+  const _PerfilView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text(
+        'Perfil de usuario',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black54,
         ),
       ),
     );

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
 import 'package:app_transtunja/screens/administrador/editar_ruta.dart';
+import 'package:app_transtunja/screens/administrador/gestion_conductores.dart';
+import 'package:app_transtunja/screens/administrador/gestion_paradas.dart';
 import 'package:app_transtunja/screens/administrador/ver_ruta.dart';
 import 'package:app_transtunja/services/ruta_service.dart';
 
@@ -30,6 +33,8 @@ class _HistorialRutasState extends State<HistorialRutas> {
   String? _busyRouteId;
   List<RouteListItem> _routes = [];
 
+  final int _currentBottomIndex = 1;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +50,36 @@ class _HistorialRutasState extends State<HistorialRutas> {
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onBottomTap(int index) {
+    if (index == _currentBottomIndex) return;
+
+    Widget? nextScreen;
+
+    switch (index) {
+      case 0:
+        nextScreen = const AdminDashboard();
+        break;
+      case 1:
+        return;
+      case 2:
+        nextScreen = const GestionParadas();
+        break;
+      case 3:
+        nextScreen = const GestionConductores();
+        break;
+      case 4:
+        nextScreen = const _PerfilAdminPage();
+        break;
+    }
+
+    if (nextScreen != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => nextScreen!),
+      );
+    }
   }
 
   Future<void> _loadRoutes({bool showLoader = true}) async {
@@ -194,9 +229,8 @@ class _HistorialRutasState extends State<HistorialRutas> {
   }
 
   Widget _buildStatusBadge(bool habilitada) {
-    final Color bg = habilitada
-        ? const Color(0xFF5FBF2A)
-        : const Color(0xFFE74C3C);
+    final Color bg =
+        habilitada ? const Color(0xFF5FBF2A) : const Color(0xFFE74C3C);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -245,12 +279,10 @@ class _HistorialRutasState extends State<HistorialRutas> {
 
   Widget _buildCard(RouteListItem route) {
     final bool isBusy = _busyRouteId == route.routeId;
-    final String nombre = route.nombre.trim().isEmpty
-        ? 'Ruta sin nombre'
-        : route.nombre.trim();
-    final String destino = route.destino.trim().isEmpty
-        ? 'Sin destino'
-        : route.destino.trim();
+    final String nombre =
+        route.nombre.trim().isEmpty ? 'Ruta sin nombre' : route.nombre.trim();
+    final String destino =
+        route.destino.trim().isEmpty ? 'Sin destino' : route.destino.trim();
     final String fecha = route.fecha?.trim().isNotEmpty == true
         ? route.fecha!.trim()
         : 'Sin fecha';
@@ -463,23 +495,6 @@ class _HistorialRutasState extends State<HistorialRutas> {
               color: Colors.white,
             ),
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.blueGrey,
-                child: Text(
-                  'AU',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(78),
             child: Container(
@@ -533,6 +548,159 @@ class _HistorialRutasState extends State<HistorialRutas> {
             ],
           ),
         ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentBottomIndex,
+          onTap: _onBottomTap,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: _primaryRed,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          showUnselectedLabels: true,
+          selectedFontSize: 13,
+          unselectedFontSize: 12,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_alt_outlined, size: 24),
+              activeIcon: Icon(Icons.people_alt_rounded, size: 28),
+              label: 'Admin',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.alt_route_outlined, size: 24),
+              activeIcon: Icon(Icons.alt_route_rounded, size: 28),
+              label: 'Rutas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.location_on_outlined, size: 24),
+              activeIcon: Icon(Icons.location_on_rounded, size: 28),
+              label: 'Paradas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.drive_eta_outlined, size: 24),
+              activeIcon: Icon(Icons.drive_eta_rounded, size: 28),
+              label: 'Conductores',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 24),
+              activeIcon: Icon(Icons.person, size: 28),
+              label: 'Perfil',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PerfilAdminPage extends StatelessWidget {
+  const _PerfilAdminPage();
+
+  static const Color _primaryRed = Color(0xFFD10000);
+  static const Color _background = Color(0xFFF6F6F7);
+
+  void _onBottomTap(BuildContext context, int index) {
+    Widget? nextScreen;
+
+    switch (index) {
+      case 0:
+        nextScreen = const AdminDashboard();
+        break;
+      case 1:
+        nextScreen = const HistorialRutas();
+        break;
+      case 2:
+        nextScreen = const GestionParadas();
+        break;
+      case 3:
+        nextScreen = const GestionConductores();
+        break;
+      case 4:
+        return;
+    }
+
+    if (nextScreen != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => nextScreen!),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _background,
+      appBar: AppBar(
+        backgroundColor: _primaryRed,
+        centerTitle: true,
+        elevation: 0,
+        title: const Text(
+          'PERFIL',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      body: const Center(
+        child: Text(
+          'Perfil de usuario',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 4,
+        onTap: (index) => _onBottomTap(context, index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: _primaryRed,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        showUnselectedLabels: true,
+        selectedFontSize: 13,
+        unselectedFontSize: 12,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w800,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+        ),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_alt_outlined, size: 24),
+            activeIcon: Icon(Icons.people_alt_rounded, size: 28),
+            label: 'Admin',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.alt_route_outlined, size: 24),
+            activeIcon: Icon(Icons.alt_route_rounded, size: 28),
+            label: 'Rutas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.location_on_outlined, size: 24),
+            activeIcon: Icon(Icons.location_on_rounded, size: 28),
+            label: 'Paradas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.drive_eta_outlined, size: 24),
+            activeIcon: Icon(Icons.drive_eta_rounded, size: 28),
+            label: 'Conductores',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline, size: 24),
+            activeIcon: Icon(Icons.person, size: 28),
+            label: 'Perfil',
+          ),
+        ],
       ),
     );
   }

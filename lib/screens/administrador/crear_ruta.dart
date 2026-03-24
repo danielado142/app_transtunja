@@ -11,15 +11,27 @@ import 'package:app_transtunja/services/ruta_service.dart';
 import 'package:app_transtunja/config/constants.dart';
 
 class CrearRuta extends StatefulWidget {
-  const CrearRuta({super.key, this.apiBaseUrl = '/transtunja'});
+  const CrearRuta({
+    super.key,
+    this.apiBaseUrl = '/transtunja',
+    this.showAppBar = true,
+  });
 
   final String apiBaseUrl;
+  final bool showAppBar;
 
   @override
   State<CrearRuta> createState() => _CrearRutaState();
 }
 
 class _CrearRutaState extends State<CrearRuta> {
+  static const Color colorRojoApp = Color(0xFFD10000);
+  static const Color colorFondo = Color(0xFFF6F6F7);
+  static const Color colorCard = Color(0xFFFFFFFF);
+  static const Color colorTextoPrincipal = Color(0xFF000000);
+  static const Color colorLimpiarBg = Color(0xFFFFE5E5);
+  static const Color colorLimpiarBorder = Color(0xFF8B0000);
+
   final MapController _mapController = MapController();
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _destinoCtrl = TextEditingController();
@@ -83,7 +95,6 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       _scheduleRouteRebuild();
     } catch (e) {
-      // Si falla el snap, agregamos el punto original para no bloquear al usuario
       setState(() => _waypoints.add(point));
       _scheduleRouteRebuild();
     }
@@ -129,6 +140,7 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       return;
     }
+
     final requestId = ++_routeRequestId;
     setState(() => _isRouting = true);
 
@@ -159,7 +171,6 @@ class _CrearRutaState extends State<CrearRuta> {
     });
   }
 
-  // --- FUNCIÓN CORREGIDA PARA XAMPP ---
   Future<void> _guardarRuta() async {
     if (_nombreCtrl.text.isEmpty || _waypoints.length < 2) {
       _showSnack('Nombre y al menos 2 puntos requeridos.', isError: true);
@@ -171,13 +182,11 @@ class _CrearRutaState extends State<CrearRuta> {
     try {
       final routeId = 'R-${DateTime.now().millisecondsSinceEpoch}';
 
-      // Formateamos la línea azul (recorrido detallado)
       final List<List<double>> formatoCoordenadas =
           (_polylinePoints.isNotEmpty ? _polylinePoints : _waypoints)
               .map((p) => [p.latitude, p.longitude])
               .toList();
 
-      // Formateamos los puntos rojos (marcadores de parada)
       final List<List<double>> formatoWaypoints =
           _waypoints.map((p) => [p.latitude, p.longitude]).toList();
 
@@ -191,7 +200,7 @@ class _CrearRutaState extends State<CrearRuta> {
           'nombre': _nombreCtrl.text,
           'destino': _destinoCtrl.text,
           'coordenadas': formatoCoordenadas,
-          'waypoitns': formatoWaypoints, // Ortografía igual a tu DB
+          'waypoitns': formatoWaypoints,
         }),
       );
 
@@ -201,8 +210,10 @@ class _CrearRutaState extends State<CrearRuta> {
           _showSnack('¡Ruta creada y guardada en XAMPP!');
           Navigator.pop(context, true);
         } else {
-          _showSnack('Error: ${resultado['message'] ?? 'Error en el servidor'}',
-              isError: true);
+          _showSnack(
+            'Error: ${resultado['message'] ?? 'Error en el servidor'}',
+            isError: true,
+          );
         }
       }
     } catch (e) {
@@ -215,64 +226,104 @@ class _CrearRutaState extends State<CrearRuta> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurar Nueva Ruta')),
+      backgroundColor: colorFondo,
+      appBar: widget.showAppBar
+          ? AppBar(
+              backgroundColor: colorRojoApp,
+              centerTitle: true,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Text(
+                'CREAR RUTA',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : null,
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             _buildTopPanel(),
-            if (_isRouting) const LinearProgressIndicator(minHeight: 2),
+            if (_isRouting)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(
+                  minHeight: 2,
+                  color: colorRojoApp,
+                ),
+              ),
             const SizedBox(height: 12),
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _tunjaCenter,
-                    initialZoom: 14.5,
-                    onTap: (_, point) => _handleMapTap(point),
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.transtunja.admin',
-                      tileProvider: CancellableNetworkTileProvider(),
-                    ),
-                    if (_polylinePoints.length >= 2)
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: _polylinePoints,
-                            strokeWidth: 5.0,
-                            color: Colors.blue,
-                          ),
-                        ],
-                      ),
-                    MarkerLayer(
-                      markers: _waypoints.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        LatLng point = entry.value;
-                        bool isSelected = _selectedMarkerIndex == index;
-                        return Marker(
-                          point: point,
-                          width: 40,
-                          height: 40,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedMarkerIndex =
-                                isSelected ? null : index),
-                            onLongPress: () => _removePoint(index),
-                            child: Icon(
-                              Icons.location_on,
-                              size: 40,
-                              color: isSelected ? Colors.orange : Colors.red,
-                            ),
-                          ),
-                        );
-                      }).toList(),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.black12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
                     ),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _tunjaCenter,
+                      initialZoom: 14.5,
+                      onTap: (_, point) => _handleMapTap(point),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.transtunja.admin',
+                        tileProvider: CancellableNetworkTileProvider(),
+                      ),
+                      if (_polylinePoints.length >= 2)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _polylinePoints,
+                              strokeWidth: 5.0,
+                              color: Colors.blue,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: _waypoints.asMap().entries.map((entry) {
+                          final int index = entry.key;
+                          final LatLng point = entry.value;
+                          final bool isSelected = _selectedMarkerIndex == index;
+
+                          return Marker(
+                            point: point,
+                            width: 40,
+                            height: 40,
+                            child: GestureDetector(
+                              onTap: () => setState(
+                                () => _selectedMarkerIndex =
+                                    isSelected ? null : index,
+                              ),
+                              onLongPress: () => _removePoint(index),
+                              child: Icon(
+                                Icons.location_on,
+                                size: 40,
+                                color: isSelected ? Colors.orange : Colors.red,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -285,21 +336,59 @@ class _CrearRutaState extends State<CrearRuta> {
   }
 
   Widget _buildTopPanel() {
-    return Card(
-      elevation: 4,
+    return Container(
+      decoration: BoxDecoration(
+        color: colorCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
             TextField(
               controller: _nombreCtrl,
+              style: const TextStyle(
+                fontSize: 14,
+                color: colorTextoPrincipal,
+              ),
               decoration: const InputDecoration(
-                  labelText: 'Nombre Ruta', prefixIcon: Icon(Icons.route)),
+                labelText: 'Nombre Ruta',
+                labelStyle: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+                prefixIcon: Icon(
+                  Icons.route,
+                  color: Colors.black54,
+                ),
+              ),
             ),
+            const SizedBox(height: 6),
             TextField(
               controller: _destinoCtrl,
+              style: const TextStyle(
+                fontSize: 14,
+                color: colorTextoPrincipal,
+              ),
               decoration: const InputDecoration(
-                  labelText: 'Destino Final', prefixIcon: Icon(Icons.flag)),
+                labelText: 'Destino Final',
+                labelStyle: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+                prefixIcon: Icon(
+                  Icons.flag,
+                  color: Colors.black54,
+                ),
+              ),
             ),
           ],
         ),
@@ -311,26 +400,63 @@ class _CrearRutaState extends State<CrearRuta> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
-            onPressed: _isSaving ? null : _clearForm,
-            child: const Text('Limpiar'),
+          child: SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: _isSaving ? null : _clearForm,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: colorLimpiarBg,
+                side: const BorderSide(
+                  color: colorLimpiarBorder,
+                  width: 1.4,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                'Limpiar',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: colorLimpiarBorder,
+                ),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _guardarRuta,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+          child: SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              onPressed: _isSaving ? null : _guardarRuta,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorRojoApp,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Guardar',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
-            child: _isSaving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : const Text('Guardar en BD'),
           ),
         ),
       ],

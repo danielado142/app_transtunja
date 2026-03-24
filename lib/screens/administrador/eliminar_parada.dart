@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:app_transtunja/services/parada_service.dart';
+import 'package:app_transtunja/screens/administrador/parada_service.dart';
 
 class EliminarParadaPage extends StatefulWidget {
   const EliminarParadaPage({super.key, this.apiBaseUrl = '/transtunja'});
