@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/administrador/crear_ruta.dart';
 import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
 import 'package:app_transtunja/screens/administrador/gestion_paradas.dart';
+import 'package:app_transtunja/screens/administrador/gestion_conductores.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -18,7 +19,7 @@ class AdminDashboard extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Image.asset(
-            'assets/images/logo.png', // cambia esta ruta por la real de tu logo
+            'assets/images/logo.png',
             fit: BoxFit.contain,
           ),
         ),
@@ -81,6 +82,24 @@ class AdminDashboard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const GestionParadas()),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.person),
+                label: const Text('Gestión de conductores'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GestionConductores(),
+                    ),
                   );
                 },
               ),
