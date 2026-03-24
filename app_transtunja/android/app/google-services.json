@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "290956858498",
+    "project_id": "fisica-f4672",
+    "storage_bucket": "fisica-f4672.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:290956858498:android:73f11339e3432eb4c0109b",
+        "android_client_info": {
+          "package_name": "com.transtunja.app.v2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtLYw9lLbIcI_-PKfd03p2rY379FUKIP0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

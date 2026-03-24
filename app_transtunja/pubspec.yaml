@@ -1,0 +1,42 @@
+name: app_transtunja
+description: "Aplicación administrativa TransTunja"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.1.0
+
+  # Autenticación
+  firebase_core: ^3.10.1
+  firebase_auth: ^5.4.4
+  google_sign_in: ^6.2.2
+  flutter_facebook_auth: ^7.0.1
+
+  # Mapas y Rutas
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  flutter_map_cancellable_tile_provider: ^3.0.0
+
+  # Utilidades
+  intl: ^0.20.2
+  url_launcher: ^6.2.6
+  material_color_utilities: 0.11.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/logo.png
