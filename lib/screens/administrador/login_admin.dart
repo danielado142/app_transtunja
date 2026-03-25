@@ -30,22 +30,18 @@ class _LoginAdminState extends State<LoginAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: Colors.white,
-
+        decoration: const BoxDecoration(color: Colors.white),
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24.0),
               constraints: const BoxConstraints(maxWidth: 420),
-
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // LOGO
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -57,13 +53,11 @@ class _LoginAdminState extends State<LoginAdmin> {
                         ),
                       ],
                     ),
-
                     child: Column(
                       children: [
                         Image.asset(
                           'assets/images/transtunja_logo.png',
                           height: 150,
-
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               height: 150,
@@ -71,7 +65,6 @@ class _LoginAdminState extends State<LoginAdmin> {
                                 color: Colors.grey[200],
                                 borderRadius: BorderRadius.circular(10),
                               ),
-
                               child: Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -81,11 +74,9 @@ class _LoginAdminState extends State<LoginAdmin> {
                                       size: 70,
                                       color: Colors.red.shade700,
                                     ),
-
                                     const SizedBox(height: 10),
-
                                     Text(
-                                      "TRANSTUNJA",
+                                      'TRANSTUNJA',
                                       style: TextStyle(
                                         color: Colors.red.shade700,
                                         fontSize: 18,
@@ -101,93 +92,109 @@ class _LoginAdminState extends State<LoginAdmin> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 40),
-
                   const Text(
-                    "Acceso Administrador",
+                    'Acceso Administrador',
                     style: TextStyle(
+                      color: Color(0xFF1A1A1A),
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1a1a1a),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
                   Container(
                     height: 3,
                     width: 60,
                     decoration: BoxDecoration(
-                      color: Colors.red.shade700,
+                      color: Colors.red,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-
                   const SizedBox(height: 40),
-
-                  // USUARIO
                   TextField(
                     controller: _usuarioCtrl,
-
+                    style: const TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontSize: 16,
+                    ),
                     decoration: InputDecoration(
-                      labelText: "Usuario",
-
+                      labelText: 'Usuario',
                       prefixIcon: Icon(
                         Icons.person,
                         color: Colors.red.shade700,
                       ),
-
-                      border: OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // CONTRASEÑA
                   TextField(
                     controller: _contrasenaCtrl,
                     obscureText: true,
-
+                    style: const TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontSize: 16,
+                    ),
                     decoration: InputDecoration(
-                      labelText: "Contraseña",
-
-                      prefixIcon: Icon(Icons.lock, color: Colors.red.shade700),
-
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      labelText: 'Contraseña',
+                      prefixIcon: Icon(
+                        Icons.lock,
+                        color: Colors.red.shade700,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.red.shade700,
+                          width: 2.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // BOTON INGRESAR
                   SizedBox(
                     width: double.infinity,
                     height: 55,
-
                     child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminDashboard(),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade700,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 10,
                       ),
-
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AdminDashboard(),
-                          ),
-                        );
-                      },
-
                       child: const Text(
-                        "INGRESAR",
+                        'INGRESAR',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

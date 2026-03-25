@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 import 'package:app_transtunja/services/routing_service.dart';
 
@@ -48,8 +49,7 @@ class _VerRutaState extends State<VerRuta> {
             .map<LatLng?>((item) {
               if (item is Map<String, dynamic>) {
                 final lat = item['lat'] ?? item['latitude'] ?? item['latitud'];
-                final lng =
-                    item['lng'] ??
+                final lng = item['lng'] ??
                     item['longitude'] ??
                     item['longitud'] ??
                     item['lon'];
@@ -116,9 +116,8 @@ class _VerRutaState extends State<VerRuta> {
       if (!mounted) return;
 
       setState(() {
-        rutaReal = trazado.isNotEmpty
-            ? trazado
-            : List<LatLng>.from(puntosControl);
+        rutaReal =
+            trazado.isNotEmpty ? trazado : List<LatLng>.from(puntosControl);
         cargando = false;
       });
 
@@ -157,9 +156,8 @@ class _VerRutaState extends State<VerRuta> {
 
   @override
   Widget build(BuildContext context) {
-    final centro = puntosControl.isNotEmpty
-        ? puntosControl.first
-        : _tunjaCenter;
+    final centro =
+        puntosControl.isNotEmpty ? puntosControl.first : _tunjaCenter;
 
     return Scaffold(
       appBar: AppBar(
@@ -174,38 +172,40 @@ class _VerRutaState extends State<VerRuta> {
       body: cargando
           ? const Center(child: CircularProgressIndicator())
           : puntosControl.isEmpty
-          ? const Center(child: Text('Esta ruta no tiene coordenadas válidas'))
-          : FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(initialCenter: centro, initialZoom: 14.5),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.transtunja.admin',
-                  tileProvider: CancellableNetworkTileProvider(),
-                ),
-                if (rutaReal.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: rutaReal,
-                        strokeWidth: 5,
-                        color: Colors.red,
+              ? const Center(
+                  child: Text('Esta ruta no tiene coordenadas válidas'))
+              : FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(initialCenter: centro, initialZoom: 14.5),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.transtunja.admin',
+                      tileProvider: CancellableNetworkTileProvider(),
+                    ),
+                    if (rutaReal.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: rutaReal,
+                            strokeWidth: 5,
+                            color: Colors.red,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                MarkerLayer(
-                  markers: List.generate(puntosControl.length, (index) {
-                    return Marker(
-                      point: puntosControl[index],
-                      width: 40,
-                      height: 40,
-                      child: _markerWidget(index),
-                    );
-                  }),
+                    MarkerLayer(
+                      markers: List.generate(puntosControl.length, (index) {
+                        return Marker(
+                          point: puntosControl[index],
+                          width: 40,
+                          height: 40,
+                          child: _markerWidget(index),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
 }

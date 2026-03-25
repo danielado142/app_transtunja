@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class HistorialPQRS extends StatefulWidget {
   const HistorialPQRS({super.key});
@@ -90,7 +91,6 @@ class _HistorialPQRSState extends State<HistorialPQRS> {
 
   String textoBusqueda = '';
   String filtroActual = 'todos';
-  int currentIndex = 3;
 
   List<Map<String, dynamic>> get pqrsFiltradas {
     List<Map<String, dynamic>> lista = pqrs.where((item) {
@@ -476,52 +476,7 @@ class _HistorialPQRSState extends State<HistorialPQRS> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-
-          // Aquí conectas tus pantallas reales:
-          // 0 -> Admin
-          // 1 -> Vehículos / Rutas
-          // 2 -> Paradas
-          // 3 -> Conductores
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: colorRojoApp,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          fontFamily: 'Roboto',
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          fontFamily: 'Roboto',
-        ),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.admin_panel_settings_outlined),
-            label: 'Admin',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.alt_route),
-            label: 'Vehículos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_on_outlined),
-            label: 'Paradas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.directions_bus_outlined),
-            label: 'Conductores',
-          ),
-        ],
-      ),
+      bottomNavigationBar: const TransTunjaBottomBar(currentIndex: 3),
     );
   }
 

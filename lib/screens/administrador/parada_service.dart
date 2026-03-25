@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// Asegúrate de importar tus constantes para que ApiConfig funcione
 import 'package:app_transtunja/config/constants.dart';
 
-// --- MODELO ---
 class ParadaModel {
   final int? id;
   final String nombre;
@@ -22,26 +20,20 @@ class ParadaModel {
   });
 
   factory ParadaModel.fromJson(Map<String, dynamic> json) {
-    double parseDouble(dynamic value) {
-      if (value == null) return 0.0;
-      return double.tryParse(value.toString()) ?? 0.0;
-    }
-
     return ParadaModel(
-      id: int.tryParse(json['id_parada'].toString()),
-      nombre: (json['nombre_parada'] ?? '').toString(),
+      id: json['id'] == null ? null : int.tryParse(json['id'].toString()),
+      nombre: (json['nombre'] ?? '').toString(),
       referencia: (json['referencia'] ?? '').toString(),
-      latitud: parseDouble(json['latitud']),
-      longitud: parseDouble(json['longitud']),
+      latitud: double.tryParse(json['latitud'].toString()) ?? 5.5353,
+      longitud: double.tryParse(json['longitud'].toString()) ?? -73.3678,
       estado: (json['estado'] ?? 'activo').toString(),
     );
   }
 
-  // Cambiado a Map<String, dynamic> para soportar jsonEncode
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id_parada': id,
-      'nombre_parada': nombre,
+      'id': id,
+      'nombre': nombre,
       'referencia': referencia,
       'latitud': latitud,
       'longitud': longitud,

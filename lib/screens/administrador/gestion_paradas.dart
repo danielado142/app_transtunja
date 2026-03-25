@@ -2,40 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/administrador/crear_parada.dart';
 import 'package:app_transtunja/screens/administrador/editar_parada.dart';
 import 'package:app_transtunja/screens/administrador/eliminar_parada.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class GestionParadas extends StatelessWidget {
   const GestionParadas({super.key});
 
-  static const Color rojoPrincipal = Color(0xFFD10000);
   static const Color grisFondo = Color(0xFFF6F6F7);
-  static const Color blanco = Color(0xFFFFFFFF);
-
   static const Color verdeBoton = Color(0xFF08A83D);
   static const Color naranjaBoton = Color(0xFFFF6A00);
   static const Color rojoBoton = Color(0xFFD10000);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: grisFondo,
-      appBar: AppBar(
-        backgroundColor: rojoPrincipal,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blanco),
-          onPressed: () => Navigator.maybePop(context),
-        ),
-        title: const Text(
-          'GESTIÓN DE PARADAS',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: blanco,
-          ),
-        ),
-      ),
-      body: SafeArea(
+    return ColoredBox(
+      color: grisFondo,
+      child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
           child: Column(
@@ -47,7 +28,9 @@ class GestionParadas extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CrearParadaPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const CrearParadaPage(),
+                    ),
                   );
                 },
               ),
@@ -59,7 +42,9 @@ class GestionParadas extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const EditarParadaPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const EditarParadaPage(),
+                    ),
                   );
                 },
               ),
@@ -81,7 +66,6 @@ class GestionParadas extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const _AdminBottomNavBar(),
     );
   }
 }
@@ -122,120 +106,6 @@ class _ActionButtonCard extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminBottomNavBar extends StatelessWidget {
-  const _AdminBottomNavBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: GestionParadas.rojoPrincipal,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.groups_2_outlined,
-                  label: 'Admin',
-                  onTap: () {
-                    // TODO: conectar navegación a Admin si ya existe la pantalla.
-                  },
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.alt_route,
-                  label: 'Rutas',
-                  onTap: () {
-                    // TODO: conectar navegación a Rutas si ya existe la pantalla.
-                  },
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.location_on_outlined,
-                  label: 'Paradas',
-                  selected: true,
-                  onTap: () {
-                    // Pantalla actual.
-                  },
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.directions_car_outlined,
-                  label: 'Conductores',
-                  onTap: () {
-                    // TODO: conectar navegación a Conductores si ya existe la pantalla.
-                  },
-                ),
-              ),
-              Expanded(
-                child: _BottomNavItem(
-                  icon: Icons.person_outline,
-                  label: 'Perfil',
-                  onTap: () {
-                    // TODO: conectar navegación a Perfil si ya existe la pantalla.
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: Colors.white,
-                size: selected ? 26 : 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                  fontFamily: 'Roboto',
                 ),
               ),
             ],

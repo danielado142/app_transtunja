@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class AsignarConductorRuta extends StatefulWidget {
   const AsignarConductorRuta({super.key});
@@ -353,8 +354,10 @@ class _AsignarConductorRutaState extends State<AsignarConductorRuta> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Resumen de asignación',
-                        style: estiloTituloCard),
+                    const Text(
+                      'Resumen de asignación',
+                      style: estiloTituloCard,
+                    ),
                     const SizedBox(height: 4),
                     const Text(
                       'Verifica la información antes de guardar',
@@ -414,7 +417,6 @@ class _AsignarConductorRutaState extends State<AsignarConductorRuta> {
                           );
 
                           // AQUÍ LUEGO VA LA CONEXIÓN A TU API / BD
-                          // Enviarías:
                           // id_conductor: conductorSeleccionado!['id_conductor']
                           // id_ruta: rutaSeleccionada!['id_ruta']
                           // fecha_asignacion: DateTime.now()
@@ -436,6 +438,7 @@ class _AsignarConductorRutaState extends State<AsignarConductorRuta> {
           ),
         ),
       ),
+      bottomNavigationBar: const TransTunjaBottomBar(currentIndex: 3),
     );
   }
 

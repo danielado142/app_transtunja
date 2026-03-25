@@ -200,7 +200,7 @@ class _CrearRutaState extends State<CrearRuta> {
           'nombre': _nombreCtrl.text,
           'destino': _destinoCtrl.text,
           'coordenadas': formatoCoordenadas,
-          'waypoitns': formatoWaypoints,
+          'waypoints': formatoWaypoints,
         }),
       );
 

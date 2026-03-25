@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:app_transtunja/screens/administrador/parada_service.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class EditarParadaPage extends StatefulWidget {
   const EditarParadaPage({super.key, this.apiBaseUrl = '/transtunja'});
@@ -17,7 +18,8 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   static const Color rojo = Color(0xFFD10000);
   static const Color blanco = Color(0xFFFFFFFF);
   static const Color grisFondo = Color(0xFFF6F6F7);
-  static const Color azul = Color(0xFF2563EB);
+  static const Color colorLimpiarBg = Color(0xFFFFE5E5);
+  static const Color colorLimpiarBorder = Color(0xFF8B0000);
   static const LatLng tunjaCenter = LatLng(5.5353, -73.3678);
 
   late final ParadaService _paradaService;
@@ -25,6 +27,7 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
   bool _isLoading = true;
   List<ParadaModel> _paradas = [];
+  String? _loadErrorMessage;
 
   @override
   void initState() {
@@ -39,16 +42,11 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
     super.dispose();
   }
 
-  void _showSnack(String texto, {bool isError = false}) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(texto), backgroundColor: isError ? rojo : null),
-    );
-  }
-
   Future<void> _cargarParadas() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadErrorMessage = null;
+    });
 
     try {
       final data = await _paradaService.obtenerParadas();
@@ -56,6 +54,7 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
       setState(() {
         _paradas = data;
+        _loadErrorMessage = null;
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -70,8 +69,13 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
           _mapController.move(tunjaCenter, 14);
         }
       });
-    } catch (e) {
-      _showSnack('Error cargando paradas: $e', isError: true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _paradas = [];
+        _loadErrorMessage =
+            'No se pudieron cargar las paradas.\nVerifique la conexión o el servicio.';
+      });
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -106,6 +110,7 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
       appBar: AppBar(
         backgroundColor: rojo,
         elevation: 0,
+        iconTheme: const IconThemeData(color: blanco),
         title: const Text(
           'GESTIÓN DE PARADAS',
           style: TextStyle(
@@ -126,6 +131,13 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
               color: blanco,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.black12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,6 +171,13 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
               color: blanco,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.black12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -198,90 +217,164 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                 ? const Center(child: CircularProgressIndicator(color: rojo))
                 : RefreshIndicator(
                     onRefresh: _cargarParadas,
-                    child: _paradas.isEmpty
+                    child: _loadErrorMessage != null
                         ? ListView(
-                            children: const [
-                              SizedBox(height: 160),
-                              Center(
-                                child: Text(
-                                  'No hay paradas registradas.',
-                                  style: TextStyle(
-                                    fontFamily: 'Roboto',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black54,
-                                  ),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                            children: [
+                              const SizedBox(height: 40),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: blanco,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.black12),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 8,
+                                      offset: Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Icon(
+                                      Icons.cloud_off,
+                                      color: rojo,
+                                      size: 42,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _loadErrorMessage!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontFamily: 'Roboto',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    SizedBox(
+                                      height: 48,
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: _cargarParadas,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: rojo,
+                                          foregroundColor: blanco,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Reintentar',
+                                          style: TextStyle(
+                                            fontFamily: 'Roboto',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                            itemCount: _paradas.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (_, index) {
-                              final parada = _paradas[index];
+                        : _paradas.isEmpty
+                            ? ListView(
+                                children: const [
+                                  SizedBox(height: 160),
+                                  Center(
+                                    child: Text(
+                                      'No hay paradas registradas.',
+                                      style: TextStyle(
+                                        fontFamily: 'Roboto',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                                itemCount: _paradas.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, index) {
+                                  final parada = _paradas[index];
 
-                              return InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () => _abrirEditor(parada),
-                                child: Card(
-                                  color: blanco,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
+                                  return InkWell(
                                     borderRadius: BorderRadius.circular(16),
-                                    side: const BorderSide(
-                                      color: Colors.black12,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Row(
-                                      children: [
-                                        const _ParadaPinIcon(size: 46),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                parada.nombre,
-                                                style: const TextStyle(
-                                                  fontFamily: 'Roboto',
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                parada.referencia.isNotEmpty
-                                                    ? parada.referencia
-                                                    : '${parada.latitud.toStringAsFixed(6)}, ${parada.longitud.toStringAsFixed(6)}',
-                                                style: const TextStyle(
-                                                  fontFamily: 'Roboto',
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black54,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                    onTap: () => _abrirEditor(parada),
+                                    child: Card(
+                                      color: blanco,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: const BorderSide(
+                                          color: Colors.black12,
                                         ),
-                                        const Icon(Icons.edit, color: azul),
-                                      ],
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Row(
+                                          children: [
+                                            const _ParadaPinIcon(size: 46),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    parada.nombre,
+                                                    style: const TextStyle(
+                                                      fontFamily: 'Roboto',
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    parada.referencia.isNotEmpty
+                                                        ? parada.referencia
+                                                        : '${parada.latitud.toStringAsFixed(6)}, ${parada.longitud.toStringAsFixed(6)}',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'Roboto',
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.edit,
+                                              color: rojo,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                  );
+                                },
+                              ),
                   ),
           ),
         ],
       ),
+      bottomNavigationBar: const _TransTunjaBottomBar(currentIndex: 2),
     );
   }
 }
@@ -305,8 +398,8 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
   static const Color rojo = Color(0xFFD10000);
   static const Color blanco = Color(0xFFFFFFFF);
   static const Color grisFondo = Color(0xFFF6F6F7);
-  static const Color verde = Color(0xFF16A34A);
-  static const Color azul = Color(0xFF2563EB);
+  static const Color colorLimpiarBg = Color(0xFFFFE5E5);
+  static const Color colorLimpiarBorder = Color(0xFF8B0000);
 
   final MapController _mapController = MapController();
   final TextEditingController _nombreCtrl = TextEditingController();
@@ -342,7 +435,10 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(texto), backgroundColor: isError ? rojo : null),
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: isError ? rojo : Colors.green,
+      ),
     );
   }
 
@@ -410,8 +506,11 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
           isError: true,
         );
       }
-    } catch (e) {
-      _showSnack('Error actualizando parada: $e', isError: true);
+    } catch (_) {
+      _showSnack(
+        'No se pudo actualizar la parada. Verifique la conexión.',
+        isError: true,
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -426,8 +525,8 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
       message: '¿Desea guardar los cambios de esta parada?',
       yesText: 'Sí',
       noText: 'No',
-      yesColor: verde,
-      noColor: azul,
+      yesColor: rojo,
+      noColor: colorLimpiarBorder,
     );
 
     if (confirmar == true) {
@@ -444,6 +543,7 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
       appBar: AppBar(
         backgroundColor: rojo,
         elevation: 0,
+        iconTheme: const IconThemeData(color: blanco),
         title: const Text(
           'GESTIÓN DE PARADAS',
           style: TextStyle(
@@ -510,6 +610,10 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: Colors.black12),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: rojo, width: 1.4),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -532,6 +636,10 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: Colors.black12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: rojo, width: 1.4),
                         ),
                       ),
                     ),
@@ -588,56 +696,64 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSaving ? null : _restablecer,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: azul,
-                      side: const BorderSide(color: azul),
-                      backgroundColor: blanco,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _isSaving ? null : _restablecer,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: colorLimpiarBg,
+                        side: const BorderSide(
+                          color: colorLimpiarBorder,
+                          width: 1.4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Restablecer',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                      child: const Text(
+                        'Restablecer',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: colorLimpiarBorder,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _confirmarGuardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: verde,
-                      foregroundColor: blanco,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _confirmarGuardar,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: rojo,
+                        foregroundColor: blanco,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: blanco,
+                              ),
+                            )
+                          : const Text(
+                              'Guardar',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                     ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: blanco,
-                            ),
-                          )
-                        : const Text(
-                            'Guardar',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
                   ),
                 ),
               ],
@@ -645,6 +761,7 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
           ],
         ),
       ),
+      bottomNavigationBar: const _TransTunjaBottomBar(currentIndex: 2),
     );
   }
 }
@@ -684,6 +801,98 @@ class _ParadaPinIcon extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TransTunjaBottomBar extends StatelessWidget {
+  const _TransTunjaBottomBar({required this.currentIndex});
+
+  static const Color rojo = Color(0xFFD10000);
+  final int currentIndex;
+
+  void _onItemTapped(BuildContext context, int index) {
+    if (index == currentIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/rutas');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/paradas');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/conductores');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/perfil');
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: rojo,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: (index) => _onItemTapped(context, index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: rojo,
+          elevation: 0,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings_outlined),
+              activeIcon: Icon(Icons.admin_panel_settings),
+              label: 'Admin',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.alt_route_outlined),
+              activeIcon: Icon(Icons.alt_route),
+              label: 'Rutas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.location_on_outlined),
+              activeIcon: Icon(Icons.location_on),
+              label: 'Paradas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.directions_car_outlined),
+              activeIcon: Icon(Icons.directions_car),
+              label: 'Conductores',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ],
+        ),
       ),
     );
   }

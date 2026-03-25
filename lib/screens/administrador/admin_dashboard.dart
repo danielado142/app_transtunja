@@ -5,7 +5,12 @@ import 'package:app_transtunja/screens/administrador/gestion_conductores.dart';
 import 'package:app_transtunja/screens/administrador/historial_rutas.dart';
 
 class AdminDashboard extends StatefulWidget {
-  const AdminDashboard({super.key});
+  const AdminDashboard({
+    super.key,
+    this.initialIndex = 0,
+  });
+
+  final int initialIndex;
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -17,12 +22,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, 4);
+  }
+
+  void _cambiarSeccion(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
   String get _appBarTitle {
     switch (_currentIndex) {
       case 1:
         return 'CREAR RUTA';
       case 2:
-        return 'PARADAS';
+        return 'GESTIÓN DE PARADAS';
       case 3:
         return 'CONDUCTORES';
       case 4:
@@ -30,6 +47,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       default:
         return 'ADMINISTRADOR';
     }
+  }
+
+  bool get _mostrarFlechaAtras {
+    return _currentIndex == 1 || _currentIndex == 2 || _currentIndex == 3;
   }
 
   @override
@@ -40,6 +61,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
         backgroundColor: colorRojoApp,
         centerTitle: true,
         elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: _mostrarFlechaAtras
+            ? IconButton(
+                onPressed: () => _cambiarSeccion(0),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              )
+            : null,
         title: Text(
           _appBarTitle,
           style: const TextStyle(
@@ -51,21 +83,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          _AdminHomeView(),
-          CrearRuta(),
-          GestionParadas(),
-          GestionConductores(),
-          _PerfilView(),
+        children: [
+          _AdminHomeView(
+            onCambiarSeccion: _cambiarSeccion,
+          ),
+          const CrearRuta(showAppBar: false),
+          const GestionParadas(),
+          const GestionConductores(),
+          const _PerfilView(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: _cambiarSeccion,
         type: BottomNavigationBarType.fixed,
         backgroundColor: colorRojoApp,
         selectedItemColor: Colors.white,
@@ -112,9 +142,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
 }
 
 class _AdminHomeView extends StatelessWidget {
-  const _AdminHomeView();
+  const _AdminHomeView({
+    required this.onCambiarSeccion,
+  });
 
   static const Color colorRojoApp = Color(0xFFD10000);
+
+  final ValueChanged<int> onCambiarSeccion;
 
   @override
   Widget build(BuildContext context) {
@@ -134,10 +168,7 @@ class _AdminHomeView extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CrearRuta()),
-                );
+                onCambiarSeccion(1);
               },
             ),
             const SizedBox(height: 12),
@@ -169,10 +200,7 @@ class _AdminHomeView extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GestionParadas()),
-                );
+                onCambiarSeccion(2);
               },
             ),
             const SizedBox(height: 12),
@@ -185,12 +213,7 @@ class _AdminHomeView extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const GestionConductores(),
-                  ),
-                );
+                onCambiarSeccion(3);
               },
             ),
             const Spacer(),
