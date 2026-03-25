@@ -36,22 +36,28 @@ class _HomeConductorState extends State<HomeConductor> {
       appBar: AppBar(
         backgroundColor: Colors.red,
         elevation: 2,
-        centerTitle: true,
+        // 1. IMPORTANTE: centerTitle en false para permitir que el Row use todo el ancho
+        centerTitle: false, 
         title: Row(
-          mainAxisSize: MainAxisSize.min,
+          // 2. SpaceBetween empuja el texto a la izquierda y el logo a la derecha
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Image.asset(
-              "assets/logo.png",
-              height: 28,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.directions_bus, color: Colors.white),
-            ),
-            const SizedBox(width: 8),
             const Text(
               "TRANSTUNJA",
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+            // 3. Logo más grande, circular y sin fondo blanco
+            ClipOval(
+              child: Image.asset(
+                "assets/logo.png",
+                height: 48, // Tamaño aumentado
+                width: 48,  // Ancho igual al alto para círculo perfecto
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.directions_bus, color: Colors.white, size: 30),
               ),
             ),
           ],
