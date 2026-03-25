@@ -13,19 +13,19 @@ class HomeConductor extends StatefulWidget {
 }
 
 class _HomeConductorState extends State<HomeConductor> {
-
   int currentIndex = 0;
-
   late final List<Widget> screens;
 
   @override
   void initState() {
     super.initState();
 
+    // ⚡ CONEXIÓN: Pasamos el nombre a las pantallas que lo necesiten
     screens = [
-      const RutaActualScreen(),
+      RutaActualScreen(nombreConductor: widget.nombreConductor), 
       const ReportesScreen(),
-      const PerfilConductorScreen(),
+      // Pasamos el nombre también al perfil para que sea dinámico allá
+      PerfilConductorScreen(nombreConductor: widget.nombreConductor), 
     ];
   }
 
@@ -33,7 +33,6 @@ class _HomeConductorState extends State<HomeConductor> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         backgroundColor: Colors.red,
         elevation: 2,
@@ -61,20 +60,17 @@ class _HomeConductorState extends State<HomeConductor> {
 
       body: screens[currentIndex],
 
-      // 🔥 CLAVE: SafeArea + altura REAL
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          height: 55, // 👈 MÁS DELGADA REAL
+          height: 55, 
           color: Colors.red,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-
               _itemNav(Icons.map, "Ruta", 0),
               _itemNav(Icons.report, "Reportes", 1),
               _itemNav(Icons.person, "Perfil", 2),
-
             ],
           ),
         ),
@@ -83,7 +79,6 @@ class _HomeConductorState extends State<HomeConductor> {
   }
 
   Widget _itemNav(IconData icon, String label, int index) {
-
     final seleccionado = currentIndex == index;
 
     return GestureDetector(
@@ -92,19 +87,15 @@ class _HomeConductorState extends State<HomeConductor> {
           currentIndex = index;
         });
       },
-
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-
           Icon(
             icon,
             size: 20,
             color: seleccionado ? Colors.white : Colors.white70,
           ),
-
           const SizedBox(height: 2),
-
           Text(
             label,
             style: TextStyle(
@@ -113,9 +104,7 @@ class _HomeConductorState extends State<HomeConductor> {
               fontWeight: seleccionado ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-
           const SizedBox(height: 2),
-
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             height: 2,

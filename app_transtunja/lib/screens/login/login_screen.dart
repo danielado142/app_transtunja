@@ -65,11 +65,17 @@ class _LoginScreenState extends State<LoginScreen> {
       if (data['status'] == 'success') {
         if (!mounted) return;
 
-        // ✅ CORRECCIÓN: Usamos 'user' que es como responde tu PHP
+        // ✅ LO QUE HACÍA FALTA: Estandarizar el nombre antes de navegar
+        // Creamos una copia de los datos del usuario
+        final Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
+        
+        // Nos aseguramos de que exista la clave 'nombreUsuario' para el saludo
+        userData['nombreUsuario'] = userData['nombreUsuario'] ?? userData['nombres'] ?? "Usuario";
+
         Navigator.pushReplacementNamed(
           context,
           '/role_selection',
-          arguments: data['user'],
+          arguments: userData, 
         );
       } else {
         if (!mounted) return;
@@ -79,7 +85,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      // ✅ Mensaje actualizado (ya no menciona XAMPP)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error de conexión con el servidor: $e")),
       );

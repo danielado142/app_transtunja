@@ -28,13 +28,13 @@ class TopCurveClipper extends CustomClipper<Path> {
 class SmsVerificationScreen extends StatefulWidget {
   final String verificationId;
   final Map<String, dynamic> userData;
-  final String? nombreUsuario; // <--- AGREGADO: Para recibir el nombre
+  final String? nombreUsuario; // <--- Mantenido
 
   const SmsVerificationScreen({
     super.key,
     required this.verificationId,
     required this.userData,
-    this.nombreUsuario, // <--- AGREGADO: Parámetro opcional
+    this.nombreUsuario, // <--- Parámetro opcional
   });
 
   @override
@@ -145,11 +145,18 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
 
       if (!mounted) return;
 
+      // ✅ PASAMOS LOS DATOS CORRECTAMENTE:
+      // Si el nombre no está en userData, lo agregamos antes de navegar
+      final Map<String, dynamic> finalData = Map.from(widget.userData);
+      if (!finalData.containsKey('nombreUsuario')) {
+        finalData['nombreUsuario'] = widget.nombreUsuario ?? "Usuario";
+      }
+
       Navigator.pushNamedAndRemoveUntil(
         context,
         '/role_selection',
         (route) => false,
-        arguments: widget.userData,
+        arguments: finalData,
       );
     } catch (e) {
       debugPrint("Error en verificación: $e");
@@ -163,7 +170,11 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
   Widget build(BuildContext context) {
     // Si usas Navigator.pushNamed, extraemos los argumentos aquí:
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String saludoNombre = widget.nombreUsuario ?? args?['nombreUsuario'] ?? "Usuario";
+    // Buscamos el nombre en el widget o en los argumentos de la ruta
+    final String saludoNombre = widget.nombreUsuario ?? 
+                                 widget.userData['nombreUsuario'] ?? 
+                                 args?['nombreUsuario'] ?? 
+                                 "Usuario";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2E7E7),

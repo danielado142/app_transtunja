@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../administrador/admin_verification_screen.dart';
-import '../conductor/verificacion_conductor.dart';
+// ✅ ELIMINADO: El import de la verificación que no existe para quitar el error rojo
+import '../conductor/home_conductor.dart'; 
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -15,28 +16,31 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
+  // ✅ ACTUALIZACIÓN: Ahora vamos directo al Home del Conductor 
+  // ya que es la única pantalla de conductor que tienes.
   void _goToDriver(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const DriverVerificationScreen()),
+      MaterialPageRoute(
+        builder: (context) => HomeConductor(
+          // Pasamos el nombre para que el Home y el Perfil funcionen
+          nombreConductor: userData['nombreUsuario'] ?? 'Conductor',
+        ),
+      ),
     );
   }
 
-  // --- NUEVA ALERTA PARA EL ROL DE USUARIO ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(
-          0xFFFDF2F2,
-        ), // Fondo sutil igual que los otros
+        backgroundColor: const Color(0xFFFDF2F2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Ícono de persona para el Usuario
             const Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
             const SizedBox(height: 25),
             const Text(
@@ -49,10 +53,11 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Has ingresado como Pasajero.',
+            // ✅ Se mantiene el uso de userData
+            Text(
+              'Has ingresado como Pasajero, ${userData['nombreUsuario'] ?? ''}.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 17, color: Colors.black54),
+              style: const TextStyle(fontSize: 17, color: Colors.black54),
             ),
             const SizedBox(height: 15),
           ],
@@ -61,14 +66,14 @@ class RoleSelectionScreen extends StatelessWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                Navigator.pop(context); // Cierra la alerta
+                Navigator.pop(context); 
                 Navigator.pushReplacementNamed(context, '/mapa_pasajero');
               },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B), // Rojo oscuro coherente
+                  color: Color(0xFFC0392B),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -131,8 +136,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
-                    onTap: () =>
-                        _showUserAlert(context), // <--- Funcionalidad añadida
+                    onTap: () => _showUserAlert(context),
                   ),
                 ],
               ),

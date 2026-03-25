@@ -3,14 +3,16 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 class RutaActualScreen extends StatefulWidget {
-  const RutaActualScreen({super.key});
+  // ⚡ SE AGREGA EL PARÁMETRO NOMBRE
+  final String nombreConductor;
+
+  const RutaActualScreen({super.key, required this.nombreConductor});
 
   @override
   State<RutaActualScreen> createState() => _RutaActualScreenState();
 }
 
 class _RutaActualScreenState extends State<RutaActualScreen> {
-
   int rutaSeleccionada = 18;
 
   // 🔴 R18
@@ -31,34 +33,30 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     List<LatLng> rutaActual =
         rutaSeleccionada == 18 ? rutaR18 : rutaR15;
 
     return Column(
       children: [
-
-        // 👋 SALUDO
+        // 👋 SALUDO DINÁMICO
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 15, 20, 10),
           child: Row(
-            children: const [
-
-              CircleAvatar(
+            children: [
+              const CircleAvatar(
                 backgroundColor: Colors.red,
                 child: Icon(Icons.directions_bus, color: Colors.white),
               ),
-
-              SizedBox(width: 10),
-
+              const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Hola Conductor",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    // ⚡ AQUÍ SE MUESTRA EL NOMBRE REAL
+                    "Hola ${widget.nombreConductor}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(
+                  const Text(
                     "Selecciona tu ruta",
                     style: TextStyle(color: Colors.grey),
                   )
@@ -73,7 +71,6 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-
               Expanded(
                 child: GestureDetector(
                   onTap: () {
@@ -84,9 +81,7 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
                   child: _botonRuta("R18", rutaSeleccionada == 18),
                 ),
               ),
-
               const SizedBox(width: 10),
-
               Expanded(
                 child: GestureDetector(
                   onTap: () {
@@ -109,20 +104,16 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 15),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(15),
-
               child: FlutterMap(
                 options: MapOptions(
                   initialCenter: LatLng(5.5447, -73.3570),
                   initialZoom: 14.5,
                 ),
-
                 children: [
-
                   TileLayer(
                     urlTemplate:
                         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                   ),
-
                   PolylineLayer(
                     polylines: [
                       Polyline(
@@ -132,7 +123,6 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
                       ),
                     ],
                   ),
-
                   MarkerLayer(
                     markers: rutaActual.map((punto) {
                       return Marker(
@@ -160,22 +150,22 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
 
   // 🔥 BOTÓN BONITO
   Widget _botonRuta(String texto, bool seleccionado) {
-  return Container(
-    alignment: Alignment.center,
-    padding: const EdgeInsets.symmetric(vertical: 8), // 👈 más pequeño
-    decoration: BoxDecoration(
-      color: seleccionado ? Colors.red : Colors.white,
-      borderRadius: BorderRadius.circular(18), // 👈 más fino
-      border: Border.all(color: Colors.red, width: 1),
-    ),
-    child: Text(
-      texto,
-      style: TextStyle(
-        color: seleccionado ? Colors.white : Colors.red,
-        fontWeight: FontWeight.w600,
-        fontSize: 14, // 👈 más pequeño
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: seleccionado ? Colors.red : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.red, width: 1),
       ),
-    ),
-  );
-}
+      child: Text(
+        texto,
+        style: TextStyle(
+          color: seleccionado ? Colors.white : Colors.red,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
 }
