@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 class CrearParadaPage extends StatefulWidget {
   const CrearParadaPage({super.key});
@@ -18,12 +18,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
   static const Color colorLimpiarBg = Color(0xFFFFE5E5);
   static const Color colorLimpiarBorder = Color(0xFF8B0000);
   static const Color borderGray = Color(0xFFD9D9D9);
-
-  final TextEditingController _nombreController = TextEditingController();
-  final TextEditingController _rutaController =
-      TextEditingController(); // NUEVO
-  final TextEditingController _referenciaController = TextEditingController();
-  final MapController _mapController = MapController();
 
   static const LatLng _tunjaCenter = LatLng(5.5353, -73.3678);
 
@@ -42,26 +36,33 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
     'inactivo',
   ];
 
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _rutaController = TextEditingController();
+  final TextEditingController _referenciaController = TextEditingController();
+  final MapController _mapController = MapController();
+
   LatLng _center = _tunjaCenter;
   LatLng? _selectedPoint;
-
-  String? _diaSemanaSeleccionado; // NUEVO
-  String _estadoSeleccionado = 'activo'; // NUEVO
+  String? _diaSemanaSeleccionado;
+  String _estadoSeleccionado = 'activo';
 
   @override
   void dispose() {
     _nombreController.dispose();
-    _rutaController.dispose(); // NUEVO
+    _rutaController.dispose();
     _referenciaController.dispose();
     _mapController.dispose();
     super.dispose();
   }
 
-  void _showSnack(String text, {bool isError = false}) {
+  void _showSnack(String texto, {bool isError = false}) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text),
+        content: Text(texto),
         backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -69,10 +70,10 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
   void _resetForm() {
     setState(() {
       _nombreController.clear();
-      _rutaController.clear(); // NUEVO
+      _rutaController.clear();
       _referenciaController.clear();
-      _diaSemanaSeleccionado = null; // NUEVO
-      _estadoSeleccionado = 'activo'; // NUEVO
+      _diaSemanaSeleccionado = null;
+      _estadoSeleccionado = 'activo';
       _selectedPoint = null;
       _center = _tunjaCenter;
       _mapController.move(_center, 14);
@@ -81,7 +82,7 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
 
   void _saveStop() {
     final nombre = _nombreController.text.trim();
-    final ruta = _rutaController.text.trim(); // NUEVO
+    final ruta = _rutaController.text.trim();
     final referencia = _referenciaController.text.trim();
 
     if (nombre.isEmpty) {
@@ -111,15 +112,13 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
 
     final nuevaParada = {
       'nombre': nombre,
-      'id_ruta': ruta, // NUEVO
+      'id_ruta': ruta.toUpperCase(),
       'referencia': referencia,
-      'dia_semana': _diaSemanaSeleccionado, // NUEVO
-      'estado': _estadoSeleccionado, // NUEVO
+      'dia_semana': _diaSemanaSeleccionado,
+      'estado': _estadoSeleccionado,
       'latitud': _selectedPoint!.latitude,
       'longitud': _selectedPoint!.longitude,
     };
-
-    _showSnack('Parada guardada correctamente');
 
     Navigator.pop(context, nuevaParada);
   }
@@ -204,7 +203,8 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
                       TileLayer(
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.transtunja',
+                        userAgentPackageName: 'com.transtunja.app',
+                        tileProvider: CancellableNetworkTileProvider(),
                       ),
                       MarkerLayer(
                         markers: _selectedPoint == null
@@ -275,10 +275,9 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               ),
             ),
             const SizedBox(height: 10),
-
-            // NUEVO: Ruta
             TextField(
               controller: _rutaController,
+              keyboardType: TextInputType.text,
               style: const TextStyle(
                 fontSize: 14,
                 color: colorTextoPrincipal,
@@ -289,7 +288,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               ),
             ),
             const SizedBox(height: 10),
-
             TextField(
               controller: _referenciaController,
               style: const TextStyle(
@@ -302,8 +300,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               ),
             ),
             const SizedBox(height: 10),
-
-            // NUEVO: Día de la semana
             DropdownButtonFormField<String>(
               value: _diaSemanaSeleccionado,
               isExpanded: true,
@@ -330,8 +326,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               },
             ),
             const SizedBox(height: 10),
-
-            // NUEVO: Estado
             DropdownButtonFormField<String>(
               value: _estadoSeleccionado,
               isExpanded: true,
@@ -360,7 +354,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               },
             ),
             const SizedBox(height: 10),
-
             const Text(
               'Toque el mapa para ubicar la parada.',
               style: TextStyle(

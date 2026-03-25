@@ -1,4 +1,7 @@
 class DestinationSuggestionModel {
   final String text;
-  DestinationSuggestionModel({required this.text});
+
+  const DestinationSuggestionModel({
+    required this.text,
+  });
 }

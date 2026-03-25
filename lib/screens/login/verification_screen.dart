@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-// ✅ Importamos la configuración centralizada
 import 'package:app_transtunja/config/constants.dart';
 
 class TopCurveClipper extends CustomClipper<Path> {
@@ -40,10 +39,8 @@ class SmsVerificationScreen extends StatefulWidget {
 }
 
 class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(
-    6,
-    (_) => TextEditingController(),
-  );
+  final List<TextEditingController> _controllers =
+      List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
 
@@ -54,72 +51,46 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     super.dispose();
   }
 
-  void _mostrarAlertaError() {
+  void _mostrarAlertaError(String titulo, String mensaje) {
     showDialog(
       context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title:
+            Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(mensaje),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK", style: TextStyle(color: Colors.red)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.cancel, color: Colors.red, size: 35),
-                  ),
-                ),
-                const Text(
-                  "Código inválido",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  "Intenta nuevamente",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 25),
-              ],
-            ),
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  // --- FUNCIÓN CORREGIDA PARA USAR ApiConfig ---
-  Future<void> _enviarAPhPMyAdmin() async {
-    // ✅ Cambiamos la IP manual por la ruta dinámica
+  // --- REGISTRO FINAL EN XAMPP ---
+  Future<bool> _enviarAPhPMyAdmin() async {
     final String urlApi = '${ApiConfig.baseUrl}/registro.php';
 
     try {
-      final response = await http.post(
-        Uri.parse(urlApi),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'nombreUsuario': widget.userData['nombreUsuario']?.toString() ?? '',
-          'nombres': widget.userData['nombres']?.toString() ?? '',
-          'apellidos': widget.userData['apellidos']?.toString() ?? '',
-          'tipoDocumento': widget.userData['tipoDocumento']?.toString() ?? 'CC',
-          'identificacion': widget.userData['identificacion']?.toString() ?? '',
-          'correo': widget.userData['correo']?.toString() ?? '',
-          'contrasena': widget.userData['contrasena']?.toString() ?? '',
-          'idRol': widget.userData['idRol']?.toString() ?? 'pasajero',
-          'fechaNacimiento':
-              widget.userData['fechaNacimiento']?.toString() ?? '',
-          'telefono': widget.userData['telefono']?.toString() ?? '',
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse(urlApi),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(widget.userData),
+          )
+          .timeout(const Duration(seconds: 10));
 
       debugPrint("Respuesta XAMPP: ${response.body}");
+
+      final data = jsonDecode(response.body);
+      // Validamos que el PHP responda con éxito
+      return (response.statusCode == 200 &&
+          (data['status'] == 'success' || data['success'] == true));
     } catch (e) {
       debugPrint("❌ Error red PHP: $e");
+      return false;
     }
   }
 
@@ -127,7 +98,7 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     String smsCode = _controllers.map((c) => c.text).join();
     if (smsCode.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa el código completo')),
+        const SnackBar(content: Text('Ingresa el código de 6 dígitos')),
       );
       return;
     }
@@ -135,28 +106,36 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Validar código con Firebase
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: widget.verificationId,
         smsCode: smsCode,
       );
 
-      // Verificamos con Firebase
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Si el SMS es correcto, guardamos en tu base de datos XAMPP
-      await _enviarAPhPMyAdmin();
+      // 2. Si Firebase es exitoso, guardar en MySQL (XAMPP)
+      bool guardadoExitoso = await _enviarAPhPMyAdmin();
 
       if (!mounted) return;
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/role_selection',
-        (route) => false,
-        arguments: widget.userData,
-      );
+      if (guardadoExitoso) {
+        // 3. Todo bien -> Ir a selección de rol o Home
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/role_selection',
+          (route) => false,
+          arguments: widget.userData,
+        );
+      } else {
+        _mostrarAlertaError("Error de Base de Datos",
+            "El SMS fue correcto, pero no pudimos crear tu perfil en el servidor.");
+      }
     } catch (e) {
       debugPrint("Error en verificación: $e");
-      if (mounted) _mostrarAlertaError();
+      if (mounted)
+        _mostrarAlertaError("Código Inválido",
+            "El código ingresado no es correcto o ya expiró.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -184,22 +163,21 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
                   const SizedBox(height: 60),
                   _buildProfileIcon(),
                   const SizedBox(height: 30),
-                  const Text(
-                    "Verificación",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
+                  const Text("Verificación",
+                      style:
+                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
                   Text("Código enviado al +57 ${widget.userData['telefono']}"),
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      6,
-                      (index) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        child: _buildCodeBox(index),
-                      ),
-                    ),
+                        6,
+                        (index) => Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
+                              child: _buildCodeBox(index),
+                            )),
                   ),
                   const SizedBox(height: 50),
                   _isLoading
@@ -209,17 +187,13 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 80,
-                              vertical: 15,
-                            ),
+                                horizontal: 80, vertical: 15),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
+                                borderRadius: BorderRadius.circular(30)),
                           ),
-                          child: const Text(
-                            "Verificar",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
+                          child: const Text("Verificar",
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 18)),
                         ),
                 ],
               ),
@@ -259,17 +233,12 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
         keyboardType: TextInputType.number,
         maxLength: 1,
         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        decoration: const InputDecoration(
-          counterText: "",
-          border: InputBorder.none,
-        ),
+        decoration:
+            const InputDecoration(counterText: "", border: InputBorder.none),
         onChanged: (value) {
-          if (value.isNotEmpty && index < 5) {
+          if (value.isNotEmpty && index < 5)
             _focusNodes[index + 1].requestFocus();
-          }
-          if (value.isEmpty && index > 0) {
-            _focusNodes[index - 1].requestFocus();
-          }
+          if (value.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
         },
       ),
     );

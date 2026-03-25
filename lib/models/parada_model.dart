@@ -1,31 +1,28 @@
-import 'dart:convert';
-
-class Parada {
-  final String? idParada;
-  final String nombreParada;
+class ParadaModel {
+  final String id;
+  final String nombre;
+  final double latitud;
+  final double longitud;
   final String idRuta;
-  final String horaSalida;
-  final String horaLlegada;
   final String diaSemana;
-  final String estado;
 
-  Parada({
-    this.idParada,
-    required this.nombreParada,
+  ParadaModel({
+    required this.id,
+    required this.nombre,
+    required this.latitud,
+    required this.longitud,
     required this.idRuta,
-    required this.horaSalida,
-    required this.horaLlegada,
     required this.diaSemana,
-    required this.estado,
   });
 
-  Map<String, dynamic> toJson() => {
-        "id_parada": idParada,
-        "nombre_parada": nombreParada,
-        "id_ruta": idRuta,
-        "hora_salida": horaSalida,
-        "hora_llegada": horaLlegada,
-        "dia_semana": diaSemana,
-        "estado": estado,
-      };
+  factory ParadaModel.fromJson(Map<String, dynamic> json) {
+    return ParadaModel(
+      id: json['id_parada']?.toString() ?? '',
+      nombre: json['nombre_parada'] ?? '',
+      latitud: double.tryParse(json['latitud']?.toString() ?? '0.0') ?? 0.0,
+      longitud: double.tryParse(json['longitud']?.toString() ?? '0.0') ?? 0.0,
+      idRuta: json['id_ruta']?.toString() ?? '',
+      diaSemana: json['dia_semana'] ?? '',
+    );
+  }
 }

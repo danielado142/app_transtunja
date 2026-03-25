@@ -7,13 +7,11 @@ import 'pantalla_bienvenida.dart';
 import 'package:app_transtunja/screens/login/login_screen.dart';
 import 'package:app_transtunja/screens/login/register_screen.dart';
 import 'package:app_transtunja/screens/login/role_selection_screen.dart';
-import 'package:app_transtunja/screens/login/verification_screen.dart';
+import 'package:app_transtunja/screens/login/verification_screen.dart'; // Verifica que aquí esté SmsVerificationScreen
 
 // --- OTROS IMPORTS ---
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 import 'package:app_transtunja/screens/usuario/user_home_screen.dart';
-
-// --- IMPORT DEL ADMINISTRADOR (Añadido) ---
 import 'package:app_transtunja/screens/administrador/login_admin.dart';
 
 Future<void> main() async {
@@ -45,45 +43,44 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      // La pantalla inicial sigue siendo Bienvenida
+
       home: const PantallaBienvenida(),
 
+      // Usamos onGenerateRoute para manejar los argumentos complejos (como mapas de datos)
       onGenerateRoute: (settings) {
+        // Extraemos los argumentos de forma segura
         final args = settings.arguments as Map<String, dynamic>? ?? {};
 
-        if (settings.name == '/role_selection') {
-          return MaterialPageRoute(
-            builder: (context) => RoleSelectionScreen(userData: args),
-          );
-        }
+        switch (settings.name) {
+          case '/sms_verification':
+            return MaterialPageRoute(
+              builder: (context) => SmsVerificationScreen(
+                verificationId: args['verificationId'] ?? '',
+                userData: args['userData'] ?? {},
+              ),
+            );
 
-        if (settings.name == '/verification') {
-          return MaterialPageRoute(
-            builder: (context) => SmsVerificationScreen(
-              verificationId: args['verificationId'] ?? '',
-              userData: args,
-            ),
-          );
-        }
+          case '/role_selection':
+            return MaterialPageRoute(
+              builder: (context) => RoleSelectionScreen(userData: args),
+            );
 
-        if (settings.name == '/login') {
-          return MaterialPageRoute(builder: (_) => const LoginScreen());
-        }
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
 
-        if (settings.name == '/register') {
-          return MaterialPageRoute(builder: (_) => const RegisterScreen());
-        }
+          case '/register':
+            return MaterialPageRoute(builder: (_) => const RegisterScreen());
 
-        if (settings.name == '/home_usuario') {
-          return MaterialPageRoute(builder: (_) => const UserHomeScreen());
-        }
+          case '/home_usuario':
+            return MaterialPageRoute(builder: (_) => const UserHomeScreen());
 
-        // --- RUTA AÑADIDA PARA EL ADMINISTRADOR ---
-        if (settings.name == '/login_admin') {
-          return MaterialPageRoute(builder: (_) => const LoginAdmin());
-        }
+          case '/login_admin':
+            return MaterialPageRoute(builder: (_) => const LoginAdmin());
 
-        return null;
+          default:
+            return MaterialPageRoute(
+                builder: (_) => const PantallaBienvenida());
+        }
       },
     );
   }

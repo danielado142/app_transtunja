@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
-import 'package:app_transtunja/services/routing_service.dart';
-import 'package:app_transtunja/services/ruta_service.dart';
 import 'package:app_transtunja/config/constants.dart';
+import 'package:app_transtunja/services/routing_service.dart';
 
 class CrearRuta extends StatefulWidget {
   const CrearRuta({
@@ -32,11 +32,13 @@ class _CrearRutaState extends State<CrearRuta> {
   static const Color colorLimpiarBg = Color(0xFFFFE5E5);
   static const Color colorLimpiarBorder = Color(0xFF8B0000);
 
+  static const LatLng _tunjaCenter = LatLng(5.5353, -73.3678);
+
   final MapController _mapController = MapController();
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _destinoCtrl = TextEditingController();
+  final TextEditingController _idRutaCtrl = TextEditingController();
 
-  late final RutaService _rutaService;
   late final RoutingService _routingService;
 
   bool _isSaving = false;
@@ -46,16 +48,20 @@ class _CrearRutaState extends State<CrearRuta> {
   List<LatLng> _polylinePoints = [];
 
   int? _selectedMarkerIndex;
-
   Timer? _routeDebounce;
   int _routeRequestId = 0;
 
-  static const LatLng _tunjaCenter = LatLng(5.5353, -73.3678);
+  String get _baseUrl {
+    final custom = widget.apiBaseUrl.trim();
+    if (custom.startsWith('http://') || custom.startsWith('https://')) {
+      return custom;
+    }
+    return ApiConfig.baseUrl;
+  }
 
   @override
   void initState() {
     super.initState();
-    _rutaService = RutaService(baseUrl: widget.apiBaseUrl);
     _routingService = RoutingService();
   }
 
@@ -64,25 +70,31 @@ class _CrearRutaState extends State<CrearRuta> {
     _routeDebounce?.cancel();
     _nombreCtrl.dispose();
     _destinoCtrl.dispose();
+    _idRutaCtrl.dispose();
     _mapController.dispose();
     super.dispose();
   }
 
   void _showSnack(String text, {bool isError = false}) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
         backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   Future<void> _handleMapTap(LatLng tappedPoint) async {
     if (_isSaving) return;
+
     if (_selectedMarkerIndex != null) {
       await _moveSelectedMarker(tappedPoint);
       return;
     }
+
     await _addPoint(tappedPoint);
   }
 
@@ -90,12 +102,17 @@ class _CrearRutaState extends State<CrearRuta> {
     try {
       final snapped = await _routingService.snapPointToRoad(point);
       if (!mounted) return;
+
       setState(() {
         _waypoints.add(snapped);
       });
       _scheduleRouteRebuild();
-    } catch (e) {
-      setState(() => _waypoints.add(point));
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _waypoints.add(point);
+      });
       _scheduleRouteRebuild();
     }
   }
@@ -103,15 +120,19 @@ class _CrearRutaState extends State<CrearRuta> {
   Future<void> _moveSelectedMarker(LatLng point) async {
     final index = _selectedMarkerIndex;
     if (index == null) return;
+
     try {
       final snapped = await _routingService.snapPointToRoad(point);
       if (!mounted) return;
+
       setState(() {
         _waypoints[index] = snapped;
         _selectedMarkerIndex = null;
       });
       _scheduleRouteRebuild();
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
+
       setState(() {
         _waypoints[index] = point;
         _selectedMarkerIndex = null;
@@ -130,7 +151,10 @@ class _CrearRutaState extends State<CrearRuta> {
 
   void _scheduleRouteRebuild() {
     _routeDebounce?.cancel();
-    _routeDebounce = Timer(const Duration(milliseconds: 500), _rebuildPolyline);
+    _routeDebounce = Timer(
+      const Duration(milliseconds: 500),
+      _rebuildPolyline,
+    );
   }
 
   Future<void> _rebuildPolyline() async {
@@ -147,11 +171,13 @@ class _CrearRutaState extends State<CrearRuta> {
     try {
       final polyline = await _routingService.buildRoadPolyline(_waypoints);
       if (!mounted || requestId != _routeRequestId) return;
+
       setState(() {
         _polylinePoints = polyline;
       });
     } catch (_) {
       if (!mounted || requestId != _routeRequestId) return;
+
       setState(() {
         _polylinePoints = List<LatLng>.from(_waypoints);
       });
@@ -165,23 +191,36 @@ class _CrearRutaState extends State<CrearRuta> {
     setState(() {
       _nombreCtrl.clear();
       _destinoCtrl.clear();
+      _idRutaCtrl.clear();
       _waypoints.clear();
       _polylinePoints.clear();
       _selectedMarkerIndex = null;
     });
+
+    _mapController.move(_tunjaCenter, 14.5);
   }
 
   Future<void> _guardarRuta() async {
-    if (_nombreCtrl.text.isEmpty || _waypoints.length < 2) {
-      _showSnack('Nombre y al menos 2 puntos requeridos.', isError: true);
+    if (_nombreCtrl.text.trim().isEmpty ||
+        _destinoCtrl.text.trim().isEmpty ||
+        _idRutaCtrl.text.trim().isEmpty ||
+        _waypoints.length < 2) {
+      _showSnack(
+        'Completa nombre, destino, ID de ruta y marca al menos 2 puntos',
+        isError: true,
+      );
+      return;
+    }
+
+    final int? routeId = int.tryParse(_idRutaCtrl.text.trim());
+    if (routeId == null) {
+      _showSnack('El ID de la ruta debe ser un número válido', isError: true);
       return;
     }
 
     setState(() => _isSaving = true);
 
     try {
-      final routeId = 'R-${DateTime.now().millisecondsSinceEpoch}';
-
       final List<List<double>> formatoCoordenadas =
           (_polylinePoints.isNotEmpty ? _polylinePoints : _waypoints)
               .map((p) => [p.latitude, p.longitude])
@@ -190,37 +229,77 @@ class _CrearRutaState extends State<CrearRuta> {
       final List<List<double>> formatoWaypoints =
           _waypoints.map((p) => [p.latitude, p.longitude]).toList();
 
-      final url = Uri.parse('${ApiConfig.baseUrl}/guardar_ruta.php');
+      final url = Uri.parse('$_baseUrl/guardar_ruta.php');
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'id_ruta': routeId,
-          'nombre': _nombreCtrl.text,
-          'destino': _destinoCtrl.text,
-          'coordenadas': formatoCoordenadas,
-          'waypoints': formatoWaypoints,
-        }),
-      );
+      final response = await http
+          .post(
+            url,
+            headers: const {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'id_ruta': routeId,
+              'nombre': _nombreCtrl.text.trim(),
+              'destino': _destinoCtrl.text.trim(),
+              'coordenadas': formatoCoordenadas,
+              'waypoints': formatoWaypoints,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      if (mounted) {
-        final resultado = jsonDecode(response.body);
-        if (response.statusCode == 200 && resultado['status'] == 'success') {
-          _showSnack('¡Ruta creada y guardada en XAMPP!');
-          Navigator.pop(context, true);
-        } else {
-          _showSnack(
-            'Error: ${resultado['message'] ?? 'Error en el servidor'}',
-            isError: true,
-          );
-        }
+      final dynamic decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : {};
+      final Map<String, dynamic> resultado =
+          decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+
+      final bool exito = response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          (resultado['status'] == 'success' || resultado['success'] == true);
+
+      if (!mounted) return;
+
+      if (exito) {
+        _showSnack('✅ Ruta guardada correctamente');
+        _clearForm();
+      } else {
+        _showSnack(
+          'Error: ${resultado['message'] ?? 'No se pudo guardar la ruta'}',
+          isError: true,
+        );
       }
     } catch (e) {
-      _showSnack('Error de conexión: $e', isError: true);
+      _showSnack('Error de red: $e', isError: true);
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontSize: 14,
+        color: Colors.black54,
+      ),
+      prefixIcon: Icon(icon, color: Colors.black54),
+      filled: true,
+      fillColor: colorCard,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.black12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: colorRojoApp, width: 1.4),
+      ),
+    );
   }
 
   @override
@@ -292,26 +371,28 @@ class _CrearRutaState extends State<CrearRuta> {
                           polylines: [
                             Polyline(
                               points: _polylinePoints,
-                              strokeWidth: 5.0,
+                              strokeWidth: 5,
                               color: Colors.blue,
                             ),
                           ],
                         ),
                       MarkerLayer(
                         markers: _waypoints.asMap().entries.map((entry) {
-                          final int index = entry.key;
-                          final LatLng point = entry.value;
-                          final bool isSelected = _selectedMarkerIndex == index;
+                          final index = entry.key;
+                          final point = entry.value;
+                          final isSelected = _selectedMarkerIndex == index;
 
                           return Marker(
                             point: point,
                             width: 40,
                             height: 40,
                             child: GestureDetector(
-                              onTap: () => setState(
-                                () => _selectedMarkerIndex =
-                                    isSelected ? null : index,
-                              ),
+                              onTap: () {
+                                setState(() {
+                                  _selectedMarkerIndex =
+                                      isSelected ? null : index;
+                                });
+                              },
                               onLongPress: () => _removePoint(index),
                               child: Icon(
                                 Icons.location_on,
@@ -359,35 +440,34 @@ class _CrearRutaState extends State<CrearRuta> {
                 fontSize: 14,
                 color: colorTextoPrincipal,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Nombre Ruta',
-                labelStyle: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-                prefixIcon: Icon(
-                  Icons.route,
-                  color: Colors.black54,
-                ),
+              decoration: _inputDecoration(
+                label: 'Nombre Ruta',
+                icon: Icons.route,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             TextField(
               controller: _destinoCtrl,
               style: const TextStyle(
                 fontSize: 14,
                 color: colorTextoPrincipal,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Destino Final',
-                labelStyle: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-                prefixIcon: Icon(
-                  Icons.flag,
-                  color: Colors.black54,
-                ),
+              decoration: _inputDecoration(
+                label: 'Destino Final',
+                icon: Icons.flag,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _idRutaCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(
+                fontSize: 14,
+                color: colorTextoPrincipal,
+              ),
+              decoration: _inputDecoration(
+                label: 'ID Ruta',
+                icon: Icons.numbers,
               ),
             ),
           ],

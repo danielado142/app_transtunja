@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:app_transtunja/screens/administrador/parada_service.dart';
-import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
+import 'package:app_transtunja/models/parada_model.dart';
 
 class EditarParadaPage extends StatefulWidget {
-  const EditarParadaPage({super.key, this.apiBaseUrl = '/transtunja'});
-
   final String apiBaseUrl;
+
+  const EditarParadaPage({
+    super.key,
+    this.apiBaseUrl = 'https://tudominio.com/transtunja',
+  });
 
   @override
   State<EditarParadaPage> createState() => _EditarParadaPageState();
@@ -18,15 +20,13 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   static const Color rojo = Color(0xFFD10000);
   static const Color blanco = Color(0xFFFFFFFF);
   static const Color grisFondo = Color(0xFFF6F6F7);
-  static const Color colorLimpiarBg = Color(0xFFFFE5E5);
-  static const Color colorLimpiarBorder = Color(0xFF8B0000);
   static const LatLng tunjaCenter = LatLng(5.5353, -73.3678);
 
   late final ParadaService _paradaService;
   final MapController _mapController = MapController();
 
-  bool _isLoading = true;
   List<ParadaModel> _paradas = [];
+  bool _isLoading = true;
   String? _loadErrorMessage;
 
   @override
@@ -42,6 +42,18 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
     super.dispose();
   }
 
+  void _showSnack(String texto, {bool isError = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _cargarParadas() async {
     setState(() {
       _isLoading = true;
@@ -54,28 +66,25 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
       setState(() {
         _paradas = data;
-        _loadErrorMessage = null;
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-
-        if (_paradas.isNotEmpty) {
-          _mapController.move(
-            LatLng(_paradas.first.latitud, _paradas.first.longitud),
-            14,
-          );
-        } else {
-          _mapController.move(tunjaCenter, 14);
-        }
+        final center = _paradas.isNotEmpty
+            ? LatLng(_paradas.first.latitud, _paradas.first.longitud)
+            : tunjaCenter;
+        _mapController.move(center, 14);
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+
       setState(() {
         _paradas = [];
         _loadErrorMessage =
-            'No se pudieron cargar las paradas.\nVerifique la conexión o el servicio.';
+            'No se pudieron cargar las paradas.\nVerifica la conexión o el servicio.';
       });
+
+      _showSnack('Error al cargar paradas: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -84,18 +93,64 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   }
 
   Future<void> _abrirEditor(ParadaModel parada) async {
-    final result = await Navigator.push<bool>(
+    final editado = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EditarParadaDetallePage(
-          apiBaseUrl: widget.apiBaseUrl,
+        builder: (_) => DetalleEdicionPage(
           parada: parada,
+          service: _paradaService,
         ),
       ),
     );
 
-    if (result == true) {
-      _cargarParadas();
+    if (editado == true) {
+      await _cargarParadas();
+    }
+  }
+
+  Future<void> _eliminarParada(ParadaModel parada) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar parada'),
+          content: Text('¿Deseas eliminar la parada "${parada.nombre}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: ElevatedButton.styleFrom(backgroundColor: rojo),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      final res = await _paradaService.eliminarParada(parada.id.toString());
+
+      final ok = res['success'] == true || res['status'] == 'success';
+
+      if (ok) {
+        _showSnack('Parada eliminada correctamente');
+        await _cargarParadas();
+      } else {
+        _showSnack(
+          'No se pudo eliminar: ${res['message'] ?? 'Error desconocido'}',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      _showSnack('Error al eliminar: $e', isError: true);
     }
   }
 
@@ -114,7 +169,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
         title: const Text(
           'GESTIÓN DE PARADAS',
           style: TextStyle(
-            fontFamily: 'Roboto',
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: blanco,
@@ -145,7 +199,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                 Text(
                   'EDITAR PARADAS',
                   style: TextStyle(
-                    fontFamily: 'Roboto',
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                     color: Colors.black,
@@ -155,9 +208,7 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                 Text(
                   'Seleccione una parada para modificar su información y ubicación.',
                   style: TextStyle(
-                    fontFamily: 'Roboto',
                     fontSize: 14,
-                    fontWeight: FontWeight.normal,
                     color: Colors.black54,
                   ),
                 ),
@@ -192,7 +243,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.transtunja.admin',
-                    tileProvider: CancellableNetworkTileProvider(),
                   ),
                   if (_paradas.isNotEmpty)
                     MarkerLayer(
@@ -214,7 +264,9 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: rojo))
+                ? const Center(
+                    child: CircularProgressIndicator(color: rojo),
+                  )
                 : RefreshIndicator(
                     onRefresh: _cargarParadas,
                     child: _loadErrorMessage != null
@@ -228,13 +280,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                   color: blanco,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(color: Colors.black12),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 8,
-                                      offset: Offset(0, 3),
-                                    ),
-                                  ],
                                 ),
                                 child: Column(
                                   children: [
@@ -248,7 +293,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                       _loadErrorMessage!,
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                        fontFamily: 'Roboto',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black87,
@@ -272,7 +316,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                         child: const Text(
                                           'Reintentar',
                                           style: TextStyle(
-                                            fontFamily: 'Roboto',
                                             fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                           ),
@@ -292,7 +335,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                     child: Text(
                                       'No hay paradas registradas.',
                                       style: TextStyle(
-                                        fontFamily: 'Roboto',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black54,
@@ -336,7 +378,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                                   Text(
                                                     parada.nombre,
                                                     style: const TextStyle(
-                                                      fontFamily: 'Roboto',
                                                       fontSize: 17,
                                                       fontWeight:
                                                           FontWeight.w900,
@@ -345,11 +386,8 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    parada.referencia.isNotEmpty
-                                                        ? parada.referencia
-                                                        : '${parada.latitud.toStringAsFixed(6)}, ${parada.longitud.toStringAsFixed(6)}',
+                                                    'Ruta: ${parada.idRuta} · ${parada.diaSemana}',
                                                     style: const TextStyle(
-                                                      fontFamily: 'Roboto',
                                                       fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w600,
@@ -357,6 +395,15 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
                                                     ),
                                                   ),
                                                 ],
+                                              ),
+                                            ),
+                                            IconButton(
+                                              tooltip: 'Eliminar',
+                                              onPressed: () =>
+                                                  _eliminarParada(parada),
+                                              icon: const Icon(
+                                                Icons.delete,
+                                                color: rojo,
                                               ),
                                             ),
                                             const Icon(
@@ -379,22 +426,21 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   }
 }
 
-class EditarParadaDetallePage extends StatefulWidget {
-  const EditarParadaDetallePage({
+class DetalleEdicionPage extends StatefulWidget {
+  final ParadaModel parada;
+  final ParadaService service;
+
+  const DetalleEdicionPage({
     super.key,
-    required this.apiBaseUrl,
     required this.parada,
+    required this.service,
   });
 
-  final String apiBaseUrl;
-  final ParadaModel parada;
-
   @override
-  State<EditarParadaDetallePage> createState() =>
-      _EditarParadaDetallePageState();
+  State<DetalleEdicionPage> createState() => _DetalleEdicionPageState();
 }
 
-class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
+class _DetalleEdicionPageState extends State<DetalleEdicionPage> {
   static const Color rojo = Color(0xFFD10000);
   static const Color blanco = Color(0xFFFFFFFF);
   static const Color grisFondo = Color(0xFFF6F6F7);
@@ -402,31 +448,23 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
   static const Color colorLimpiarBorder = Color(0xFF8B0000);
 
   final MapController _mapController = MapController();
-  final TextEditingController _nombreCtrl = TextEditingController();
-  final TextEditingController _referenciaCtrl = TextEditingController();
+  late final TextEditingController _nombreCtrl;
 
-  late final ParadaService _paradaService;
-
+  late LatLng _originalPoint;
   LatLng? _selectedPoint;
-  LatLng? _originalPoint;
-
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _paradaService = ParadaService(baseUrl: widget.apiBaseUrl);
-
-    _nombreCtrl.text = widget.parada.nombre;
-    _referenciaCtrl.text = widget.parada.referencia;
-    _selectedPoint = LatLng(widget.parada.latitud, widget.parada.longitud);
+    _nombreCtrl = TextEditingController(text: widget.parada.nombre);
     _originalPoint = LatLng(widget.parada.latitud, widget.parada.longitud);
+    _selectedPoint = _originalPoint;
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
-    _referenciaCtrl.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -437,100 +475,63 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(texto),
-        backgroundColor: isError ? rojo : Colors.green,
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  void _handleMapTap(LatLng point) {
-    if (_isSaving) return;
-
-    setState(() {
-      _selectedPoint = point;
-    });
-
-    _showSnack('Ubicación actualizada en el mapa.');
-  }
-
-  String? _validar() {
-    if (_nombreCtrl.text.trim().isEmpty) {
-      return 'El nombre de la parada es obligatorio.';
-    }
-    if (_selectedPoint == null) {
-      return 'Debe seleccionar un punto en el mapa.';
-    }
-    return null;
   }
 
   void _restablecer() {
     setState(() {
       _nombreCtrl.text = widget.parada.nombre;
-      _referenciaCtrl.text = widget.parada.referencia;
       _selectedPoint = _originalPoint;
     });
 
-    if (_originalPoint != null) {
-      _mapController.move(_originalPoint!, 15);
-    }
+    _mapController.move(_originalPoint, 15);
   }
 
   Future<void> _guardarParada() async {
-    final validation = _validar();
-    if (validation != null) {
-      _showSnack(validation, isError: true);
+    if (_nombreCtrl.text.trim().isEmpty) {
+      _showSnack('El nombre de la parada es obligatorio.', isError: true);
+      return;
+    }
+
+    if (_selectedPoint == null) {
+      _showSnack('Debe seleccionar un punto en el mapa.', isError: true);
       return;
     }
 
     setState(() => _isSaving = true);
 
-    try {
-      final paradaActualizada = ParadaModel(
-        id: widget.parada.id,
-        nombre: _nombreCtrl.text.trim(),
-        referencia: _referenciaCtrl.text.trim(),
-        latitud: _selectedPoint!.latitude,
-        longitud: _selectedPoint!.longitude,
-        estado: widget.parada.estado,
-      );
+    final Map<String, dynamic> datos = {
+      'id_parada': widget.parada.id.toString(),
+      'nombre_parada': _nombreCtrl.text.trim(),
+      'latitud': _selectedPoint!.latitude.toString(),
+      'longitud': _selectedPoint!.longitude.toString(),
+      'id_ruta': widget.parada.idRuta.toString(),
+      'dia_semana': widget.parada.diaSemana.toString(),
+    };
 
-      final result = await _paradaService.guardarParada(paradaActualizada);
+    try {
+      final res = await widget.service.guardarParadaDirecto(datos);
 
       if (!mounted) return;
 
-      if (result['success'] == true) {
-        _showSnack('Parada actualizada correctamente.');
+      if (res['success'] == true || res['status'] == 'success') {
+        _showSnack('Parada actualizada correctamente');
         Navigator.pop(context, true);
       } else {
         _showSnack(
-          result['message']?.toString() ?? 'No se pudo actualizar la parada.',
+          'Error: ${res['message'] ?? 'No se pudo actualizar la parada'}',
           isError: true,
         );
       }
-    } catch (_) {
-      _showSnack(
-        'No se pudo actualizar la parada. Verifique la conexión.',
-        isError: true,
-      );
+    } catch (e) {
+      _showSnack('Error de red: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
       }
-    }
-  }
-
-  Future<void> _confirmarGuardar() async {
-    final confirmar = await _showActionDialog(
-      context: context,
-      title: 'Confirmación',
-      message: '¿Desea guardar los cambios de esta parada?',
-      yesText: 'Sí',
-      noText: 'No',
-      yesColor: rojo,
-      noColor: colorLimpiarBorder,
-    );
-
-    if (confirmar == true) {
-      await _guardarParada();
     }
   }
 
@@ -545,9 +546,8 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: blanco),
         title: const Text(
-          'GESTIÓN DE PARADAS',
+          'EDITAR PARADA',
           style: TextStyle(
-            fontFamily: 'Roboto',
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: blanco,
@@ -571,9 +571,8 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'EDITAR PARADA',
+                      'DATOS DE LA PARADA',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                         color: Colors.black,
@@ -583,9 +582,7 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                     const Text(
                       'Modifique la información y toque el mapa para reubicar la parada.',
                       style: TextStyle(
-                        fontFamily: 'Roboto',
                         fontSize: 14,
-                        fontWeight: FontWeight.normal,
                         color: Colors.black54,
                       ),
                     ),
@@ -594,39 +591,6 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                       controller: _nombreCtrl,
                       decoration: InputDecoration(
                         labelText: 'Nombre de la parada',
-                        labelStyle: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black54,
-                        ),
-                        filled: true,
-                        fillColor: grisFondo,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: rojo, width: 1.4),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _referenciaCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Referencia',
-                        labelStyle: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black54,
-                        ),
                         filled: true,
                         fillColor: grisFondo,
                         border: OutlineInputBorder(
@@ -649,7 +613,6 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                           ? 'Toque el mapa para ubicar la parada.'
                           : 'Ubicación: ${_selectedPoint!.latitude.toStringAsFixed(6)}, ${_selectedPoint!.longitude.toStringAsFixed(6)}',
                       style: const TextStyle(
-                        fontFamily: 'Roboto',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.black54,
@@ -668,14 +631,17 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                   options: MapOptions(
                     initialCenter: mapCenter,
                     initialZoom: 15,
-                    onTap: (_, point) => _handleMapTap(point),
+                    onTap: (_, point) {
+                      setState(() {
+                        _selectedPoint = point;
+                      });
+                    },
                   ),
                   children: [
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.transtunja.admin',
-                      tileProvider: CancellableNetworkTileProvider(),
                     ),
                     if (_selectedPoint != null)
                       MarkerLayer(
@@ -713,7 +679,6 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                       child: const Text(
                         'Restablecer',
                         style: TextStyle(
-                          fontFamily: 'Roboto',
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: colorLimpiarBorder,
@@ -727,7 +692,7 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                   child: SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _isSaving ? null : _confirmarGuardar,
+                      onPressed: _isSaving ? null : _guardarParada,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: rojo,
                         foregroundColor: blanco,
@@ -748,7 +713,6 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
                           : const Text(
                               'Guardar',
                               style: TextStyle(
-                                fontFamily: 'Roboto',
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -761,7 +725,6 @@ class _EditarParadaDetallePageState extends State<EditarParadaDetallePage> {
           ],
         ),
       ),
-      bottomNavigationBar: const _TransTunjaBottomBar(currentIndex: 2),
     );
   }
 }
@@ -896,110 +859,4 @@ class _TransTunjaBottomBar extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<bool?> _showActionDialog({
-  required BuildContext context,
-  required String title,
-  required String message,
-  required String yesText,
-  required String noText,
-  required Color yesColor,
-  required Color noColor,
-}) {
-  return showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(false),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: noColor,
-                            side: BorderSide(color: noColor),
-                          ),
-                          child: Text(
-                            noText,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: yesColor,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text(
-                            yesText,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
 }
