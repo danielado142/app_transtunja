@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../administrador/admin_verification_screen.dart';
 import '../conductor/verificacion_conductor.dart';
+import '../usuario/user_home_screen.dart'; // ✅ Importación correcta
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -22,21 +23,18 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // --- NUEVA ALERTA PARA EL ROL DE USUARIO ---
+  // --- ALERTA CORREGIDA PARA DIRIGIR A USER_HOME_SCREEN ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(
-          0xFFFDF2F2,
-        ), // Fondo sutil igual que los otros
+        backgroundColor: const Color(0xFFFDF2F2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 10),
-            // Ícono de persona para el Usuario
             const Icon(Icons.person, color: Color(0xFFB4C424), size: 80),
             const SizedBox(height: 25),
             const Text(
@@ -62,13 +60,19 @@ class RoleSelectionScreen extends StatelessWidget {
             child: TextButton(
               onPressed: () {
                 Navigator.pop(context); // Cierra la alerta
-                Navigator.pushReplacementNamed(context, '/mapa_pasajero');
+
+                // ✅ CAMBIO AQUÍ: Navegamos directamente a la clase UserHomeScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const UserHomeScreen()),
+                );
               },
               child: const Text(
                 "Aceptar",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color(0xFFC0392B), // Rojo oscuro coherente
+                  color: Color(0xFFC0392B),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -131,8 +135,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     icon: Icons.person_outline,
                     label: 'Usuario',
                     color: const Color(0xFFB4C424),
-                    onTap: () =>
-                        _showUserAlert(context), // <--- Funcionalidad añadida
+                    onTap: () => _showUserAlert(context),
                   ),
                 ],
               ),

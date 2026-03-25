@@ -52,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // 3. Preparación de datos para el JSON (Coincide con tu PHP)
+    // 3. Preparación de datos (Incluyendo 'soloValidar' para Hostinger)
     Map<String, dynamic> data = {
       "nombreUsuario": _usernameController.text.trim(),
       "nombres": _nombresController.text.trim(),
@@ -64,10 +64,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       "telefono": _telefonoController.text.trim(),
       "fechaNacimiento": _dateController.text,
       "idRol": _selectedRol,
+      "soloValidar": true, // <--- CLAVE: El PHP solo verificará disponibilidad
     };
 
     try {
-      // 4. Petición a tu API en el Hosting/XAMPP
+      // 4. Petición a tu API en el Hosting
       final response = await http
           .post(
             Uri.parse(
@@ -82,19 +83,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final responseData = jsonDecode(response.body);
 
-      // 5. Si la base de datos acepta el registro, procedemos al SMS
+      // 5. Si el PHP da luz verde (el usuario no existe), enviamos SMS
       if (response.statusCode == 200 && responseData['status'] == 'success') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text("Usuario validado. Enviando código SMS..."),
+                content: Text("Datos validados. Enviando código SMS..."),
                 backgroundColor: Colors.blue),
           );
 
-          // INICIAR FLUJO DE SMS (AuthService manejará el envío y la navegación al PIN)
+          // INICIAR FLUJO DE SMS
           await AuthService().enviarCodigoVerificacion(
             context: context,
-            userData: data, // Pasamos el mapa con el teléfono incluido
+            userData: data, // Enviamos el mapa completo a la siguiente pantalla
           );
         }
       } else {
@@ -392,14 +393,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _socialIcon('assets/images/facebook.png',
                           () => debugPrint("Facebook")),
                       const SizedBox(width: 25),
-                      _socialIcon('assets/images/correo.png',
+                      _socialIcon('assets/images/google.png',
                           () => AuthService().signInWithGoogle(context)),
                       const SizedBox(width: 25),
                       _socialIcon('assets/images/instagram.png',
                           () => debugPrint("Instagram")),
-                      const SizedBox(width: 25),
-                      _socialIcon('assets/images/google.png',
-                          () => AuthService().signInWithGoogle(context)),
                     ],
                   ),
                   const SizedBox(height: 40),

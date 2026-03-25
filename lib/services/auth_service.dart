@@ -49,37 +49,56 @@ class AuthService {
     required Map<String, dynamic> userData,
   }) async {
     try {
+      // Limpiamos el teléfono por si viene con espacios
       String tel = userData['telefono'].toString().trim().replaceAll(' ', '');
       String telFormateado = tel.startsWith('+') ? tel : '+57$tel';
 
       await _auth.verifyPhoneNumber(
         phoneNumber: telFormateado,
         verificationCompleted: (PhoneAuthCredential cred) async {
+          // Algunos dispositivos Android verifican el SMS automáticamente
           await _auth.signInWithCredential(cred);
+
+          // Registro final en MySQL tras validación automática
           await insertarUsuarioMySQL(userData);
-          if (context.mounted)
-            Navigator.pushReplacementNamed(context, '/mapa_pasajero');
-        },
-        verificationFailed: (e) {
+
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error SMS: ${e.message}")));
+            Navigator.pushReplacementNamed(context, '/home_usuario');
           }
         },
-        codeSent: (id, token) {
-          Navigator.pushNamed(context, '/verification',
-              arguments: {'verificationId': id, 'userData': userData});
+        verificationFailed: (FirebaseAuthException e) {
+          debugPrint("Error Firebase: ${e.message}");
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Error SMS: ${e.message}")),
+            );
+          }
         },
-        codeAutoRetrievalTimeout: (_) {},
+        codeSent: (String verificationId, int? resendToken) {
+          // ✅ Navega a la interfaz de los 6 cuadritos enviando los datos necesarios
+          Navigator.pushNamed(
+            context,
+            '/sms_verification',
+            arguments: {
+              'verificationId': verificationId,
+              'userData': userData,
+            },
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
       );
     } catch (e) {
       debugPrint("Error crítico SMS: $e");
     }
   }
 
-  // --- INSERTAR EN MYSQL ---
+  // --- INSERTAR EN MYSQL (XAMPP / HOSTINGER) ---
+  // CORREGIDO: Ahora asegura que 'soloValidar' sea false para guardar realmente
   Future<bool> insertarUsuarioMySQL(Map<String, dynamic> datos) async {
     try {
+      // ✅ PASO CLAVE: Sobrescribimos para que el PHP ejecute el INSERT
+      datos['soloValidar'] = false;
+
       final response = await http
           .post(
             Uri.parse("${ApiConfig.baseUrl}/registro.php"),
@@ -87,9 +106,17 @@ class AuthService {
             body: jsonEncode(datos),
           )
           .timeout(const Duration(seconds: 15));
+
+      final resBody = jsonDecode(response.body);
+
+      if (resBody['status'] != 'success') {
+        debugPrint("Error del servidor: ${resBody['message']}");
+      }
+
       return response.statusCode == 200 &&
-          jsonDecode(response.body)['status'] == 'success';
+          (resBody['status'] == 'success' || resBody['success'] == true);
     } catch (e) {
+      debugPrint("Error insertando en MySQL: $e");
       return false;
     }
   }
@@ -110,31 +137,34 @@ class AuthService {
 
       UserCredential userCredential =
           await _auth.signInWithCredential(credential);
+
       if (userCredential.user != null && context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-              builder: (context) => RoleSelectionScreen(userData: {
-                    'nombreUsuario': userCredential.user!.displayName,
-                    'email': userCredential.user!.email,
-                    'google_id': userCredential.user!.uid
-                  })),
+            builder: (context) => RoleSelectionScreen(userData: {
+              'nombreUsuario': userCredential.user!.displayName,
+              'email': userCredential.user!.email,
+              'google_id': userCredential.user!.uid
+            }),
+          ),
           (route) => false,
         );
       }
       return userCredential;
     } catch (e) {
+      debugPrint("Error Google Sign In: $e");
       return null;
     }
   }
 
-  // ✅ MÉTODO CORREGIDO: Ahora acepta el parámetro 'dia'
+  // --- GUARDAR PARADA ---
   Future<bool> guardarParada({
     required String nombre,
     required double latitud,
     required double longitud,
     required int idRuta,
-    required String dia, // <-- ESTO ES LO QUE FALTABA
+    required String dia,
   }) async {
     final url = Uri.parse('${ApiConfig.baseUrl}/guardar_parada.php');
     try {
@@ -147,7 +177,7 @@ class AuthService {
               "latitud": latitud,
               "longitud": longitud,
               "id_ruta": idRuta,
-              "dia": dia, // <-- Enviamos el día a XAMPP
+              "dia": dia,
             }),
           )
           .timeout(const Duration(seconds: 15));
@@ -163,6 +193,7 @@ class AuthService {
     }
   }
 
+  // --- CERRAR SESIÓN ---
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();
