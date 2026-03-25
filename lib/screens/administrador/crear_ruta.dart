@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:app_transtunja/services/routing_service.dart';
 import 'package:app_transtunja/services/ruta_service.dart';
+import 'package:app_transtunja/services/auth_service.dart';
 import 'package:app_transtunja/config/constants.dart';
 
 class CrearRuta extends StatefulWidget {
@@ -23,9 +24,11 @@ class _CrearRutaState extends State<CrearRuta> {
   final MapController _mapController = MapController();
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _destinoCtrl = TextEditingController();
+  final TextEditingController _idRutaCtrl = TextEditingController();
 
   late final RutaService _rutaService;
   late final RoutingService _routingService;
+  final AuthService _authService = AuthService();
 
   bool _isSaving = false;
   bool _isRouting = false;
@@ -34,6 +37,7 @@ class _CrearRutaState extends State<CrearRuta> {
   List<LatLng> _polylinePoints = [];
 
   int? _selectedMarkerIndex;
+  String _diaSeleccionado = "LUNES";
 
   Timer? _routeDebounce;
   int _routeRequestId = 0;
@@ -52,6 +56,7 @@ class _CrearRutaState extends State<CrearRuta> {
     _routeDebounce?.cancel();
     _nombreCtrl.dispose();
     _destinoCtrl.dispose();
+    _idRutaCtrl.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -83,7 +88,6 @@ class _CrearRutaState extends State<CrearRuta> {
       });
       _scheduleRouteRebuild();
     } catch (e) {
-      // Si falla el snap, agregamos el punto original para no bloquear al usuario
       setState(() => _waypoints.add(point));
       _scheduleRouteRebuild();
     }
@@ -153,60 +157,58 @@ class _CrearRutaState extends State<CrearRuta> {
     setState(() {
       _nombreCtrl.clear();
       _destinoCtrl.clear();
+      _idRutaCtrl.clear();
       _waypoints.clear();
       _polylinePoints.clear();
       _selectedMarkerIndex = null;
     });
   }
 
-  // --- FUNCIÓN CORREGIDA PARA XAMPP ---
+  // --- FUNCIÓN GUARDAR PARADA (CORREGIDA) ---
   Future<void> _guardarRuta() async {
-    if (_nombreCtrl.text.isEmpty || _waypoints.length < 2) {
-      _showSnack('Nombre y al menos 2 puntos requeridos.', isError: true);
+    if (_nombreCtrl.text.isEmpty ||
+        _idRutaCtrl.text.isEmpty ||
+        _waypoints.isEmpty) {
+      _showSnack('Por favor completa todos los campos y marca un punto',
+          isError: true);
+      return;
+    }
+
+    // Intentar convertir el texto del ID a un número entero
+    final int? idRutaParsed = int.tryParse(_idRutaCtrl.text.trim());
+    if (idRutaParsed == null) {
+      _showSnack('El ID de la ruta debe ser un número válido', isError: true);
       return;
     }
 
     setState(() => _isSaving = true);
 
     try {
-      final routeId = 'R-${DateTime.now().millisecondsSinceEpoch}';
+      // Usamos el último punto marcado en el mapa como la parada
+      final LatLng punto = _waypoints.last;
 
-      // Formateamos la línea azul (recorrido detallado)
-      final List<List<double>> formatoCoordenadas =
-          (_polylinePoints.isNotEmpty ? _polylinePoints : _waypoints)
-              .map((p) => [p.latitude, p.longitude])
-              .toList();
+      debugPrint("Enviando Parada: ${_nombreCtrl.text}, ID: $idRutaParsed");
 
-      // Formateamos los puntos rojos (marcadores de parada)
-      final List<List<double>> formatoWaypoints =
-          _waypoints.map((p) => [p.latitude, p.longitude]).toList();
-
-      final url = Uri.parse('${ApiConfig.baseUrl}/guardar_ruta.php');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'id_ruta': routeId,
-          'nombre': _nombreCtrl.text,
-          'destino': _destinoCtrl.text,
-          'coordenadas': formatoCoordenadas,
-          'waypoitns': formatoWaypoints, // Ortografía igual a tu DB
-        }),
+      // Corrección de tipos y parámetros
+      final bool exito = await _authService.guardarParada(
+        nombre: _nombreCtrl.text.trim(),
+        idRuta: idRutaParsed, // Ahora es un INT
+        dia: _diaSeleccionado.toUpperCase(),
+        latitud: punto.latitude,
+        longitud: punto.longitude,
       );
 
       if (mounted) {
-        final resultado = jsonDecode(response.body);
-        if (response.statusCode == 200 && resultado['status'] == 'success') {
-          _showSnack('¡Ruta creada y guardada en XAMPP!');
-          Navigator.pop(context, true);
+        if (exito) {
+          _showSnack('✅ Parada guardada correctamente');
+          _clearForm();
         } else {
-          _showSnack('Error: ${resultado['message'] ?? 'Error en el servidor'}',
+          _showSnack('❌ El servidor rechazó los datos. Revisa la consola.',
               isError: true);
         }
       }
     } catch (e) {
-      _showSnack('Error de conexión: $e', isError: true);
+      _showSnack('Error de red: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -294,12 +296,31 @@ class _CrearRutaState extends State<CrearRuta> {
             TextField(
               controller: _nombreCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Nombre Ruta', prefixIcon: Icon(Icons.route)),
+                  labelText: 'Nombre Parada/Ruta',
+                  prefixIcon: Icon(Icons.route)),
             ),
             TextField(
-              controller: _destinoCtrl,
+              controller: _idRutaCtrl,
+              keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                  labelText: 'Destino Final', prefixIcon: Icon(Icons.flag)),
+                  labelText: 'ID Ruta', prefixIcon: Icon(Icons.numbers)),
+            ),
+            DropdownButtonFormField<String>(
+              value: _diaSeleccionado,
+              decoration: const InputDecoration(
+                  labelText: "Día", prefixIcon: Icon(Icons.calendar_today)),
+              items: [
+                "LUNES",
+                "MARTES",
+                "MIERCOLES",
+                "JUEVES",
+                "VIERNES",
+                "SABADO",
+                "DOMINGO"
+              ]
+                  .map((dia) => DropdownMenuItem(value: dia, child: Text(dia)))
+                  .toList(),
+              onChanged: (val) => setState(() => _diaSeleccionado = val!),
             ),
           ],
         ),
@@ -330,7 +351,7 @@ class _CrearRutaState extends State<CrearRuta> {
                     width: 20,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
-                : const Text('Guardar en BD'),
+                : const Text('Guardar Parada'),
           ),
         ),
       ],

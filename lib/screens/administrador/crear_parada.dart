@@ -2,388 +2,325 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-import 'package:app_transtunja/services/parada_service.dart';
+import 'package:app_transtunja/config/constants.dart';
 
 class CrearParadaPage extends StatefulWidget {
-  const CrearParadaPage({super.key, this.apiBaseUrl = '/transtunja'});
-
-  final String apiBaseUrl;
+  const CrearParadaPage({super.key});
 
   @override
   State<CrearParadaPage> createState() => _CrearParadaPageState();
 }
 
 class _CrearParadaPageState extends State<CrearParadaPage> {
-  static const Color rojo = Color(0xFFD10000);
-  static const Color blanco = Color(0xFFFFFFFF);
-  static const Color grisFondo = Color(0xFFF6F6F7);
-  static const Color verde = Color(0xFF16A34A);
-  static const Color azul = Color(0xFF2563EB);
-
+  static const Color rojoPrincipal = Color(0xFFD10000);
+  static const Color grisFondo = Color(0xFFF5F5F5);
   static const LatLng tunjaCenter = LatLng(5.5353, -73.3678);
 
   final MapController _mapController = MapController();
   final TextEditingController _nombreCtrl = TextEditingController();
-  final TextEditingController _referenciaCtrl = TextEditingController();
+  final TextEditingController _idRutaCtrl = TextEditingController();
 
-  late final ParadaService _paradaService;
+  String _diaSeleccionado = 'LUNES';
+  final List<String> _diasSemana = [
+    'LUNES',
+    'MARTES',
+    'MIÉRCOLES',
+    'JUEVES',
+    'VIERNES',
+    'SÁBADO',
+    'DOMINGO'
+  ];
 
   LatLng? _selectedPoint;
   bool _isSaving = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _paradaService = ParadaService(baseUrl: widget.apiBaseUrl);
-  }
-
-  @override
-  void dispose() {
-    _nombreCtrl.dispose();
-    _referenciaCtrl.dispose();
-    _mapController.dispose();
-    super.dispose();
-  }
-
   void _showSnack(String texto, {bool isError = false}) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(texto), backgroundColor: isError ? rojo : null),
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  void _handleMapTap(LatLng point) {
-    if (_isSaving) return;
-
-    setState(() {
-      _selectedPoint = point;
-    });
-
-    _showSnack('Ubicación seleccionada correctamente.');
-  }
-
-  String? _validar() {
-    if (_nombreCtrl.text.trim().isEmpty) {
-      return 'El nombre de la parada es obligatorio.';
-    }
-    if (_selectedPoint == null) {
-      return 'Debe seleccionar un punto en el mapa.';
-    }
-    return null;
+  void _handleMapTap(TapPosition tapPosition, LatLng point) {
+    setState(() => _selectedPoint = point);
+    debugPrint("Punto seleccionado: ${point.latitude}, ${point.longitude}");
   }
 
   void _restablecer() {
     setState(() {
       _nombreCtrl.clear();
-      _referenciaCtrl.clear();
+      _idRutaCtrl.clear();
+      _diaSeleccionado = 'LUNES';
       _selectedPoint = null;
     });
   }
 
-  Future<void> _guardarParada() async {
-    final validation = _validar();
-    if (validation != null) {
-      _showSnack(validation, isError: true);
+  Future<void> _procesoGuardado() async {
+    // Validamos que los campos no estén vacíos
+    if (_nombreCtrl.text.trim().isEmpty || _idRutaCtrl.text.trim().isEmpty) {
+      _showSnack('Completa el nombre y el ID de la ruta (Ej: R4)',
+          isError: true);
+      return;
+    }
+
+    if (_selectedPoint == null) {
+      _showSnack('Por favor, toca el mapa para ubicar la parada',
+          isError: true);
       return;
     }
 
     setState(() => _isSaving = true);
 
     try {
-      final parada = ParadaModel(
-        nombre: _nombreCtrl.text.trim(),
-        referencia: _referenciaCtrl.text.trim(),
-        latitud: _selectedPoint!.latitude,
-        longitud: _selectedPoint!.longitude,
-        estado: 'activo',
-      );
+      final url = Uri.parse("${ApiConfig.baseUrl}/guardar_parada.php");
 
-      final result = await _paradaService.guardarParada(parada);
+      // Enviamos el ID de ruta tal cual se escribe (Soportando la "R")
+      final response = await http
+          .post(
+            url,
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: jsonEncode({
+              "nombre_parada": _nombreCtrl.text.trim(),
+              "id_ruta": _idRutaCtrl.text
+                  .trim()
+                  .toUpperCase(), // Convertimos r4 a R4 automáticamente
+              "dia_semana": _diaSeleccionado,
+              "latitud": _selectedPoint!.latitude,
+              "longitud": _selectedPoint!.longitude,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      if (!mounted) return;
+      print("--- INICIO DE RESPUESTA DEL SERVIDOR ---");
+      print("Código de estado: ${response.statusCode}");
+      print("Cuerpo recibido: ${response.body}");
+      print("--- FIN DE RESPUESTA DEL SERVIDOR ---");
 
-      if (result['success'] == true) {
-        _showSnack('Parada creada correctamente.');
-        Navigator.pop(context, true);
-      } else {
-        _showSnack(
-          result['message']?.toString() ?? 'No se pudo guardar la parada.',
-          isError: true,
-        );
+      final res = jsonDecode(response.body);
+
+      if (mounted) {
+        if (res['status'] == 'success') {
+          _showSnack('¡Parada guardada con éxito en MySQL!');
+          _restablecer();
+          Future.delayed(
+              const Duration(seconds: 1), () => Navigator.pop(context));
+        } else {
+          // Si sale el error de Foreign Key, el PHP nos enviará el mensaje aquí
+          _showSnack(res['message'] ?? 'Error en el servidor', isError: true);
+        }
       }
     } catch (e) {
-      _showSnack('Error guardando parada: $e', isError: true);
+      _showSnack('Error de conexión o formato: $e', isError: true);
+      debugPrint("Error crítico: $e");
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
-  }
-
-  Future<void> _confirmarGuardar() async {
-    final confirmar = await _showActionDialog(
-      context: context,
-      title: 'Confirmación',
-      message: '¿Desea guardar la nueva parada?',
-      yesText: 'Sí',
-      noText: 'No',
-      yesColor: verde,
-      noColor: azul,
-    );
-
-    if (confirmar == true) {
-      await _guardarParada();
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mapCenter = _selectedPoint ?? tunjaCenter;
-
     return Scaffold(
       backgroundColor: grisFondo,
       appBar: AppBar(
-        backgroundColor: rojo,
-        foregroundColor: blanco,
+        backgroundColor: rojoPrincipal,
+        foregroundColor: Colors.white,
+        title: const Text('GESTIÓN DE PARADAS',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
-        title: const Text(
-          'GESTIÓN DE PARADAS',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: blanco,
-          ),
-        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Card(
-              color: blanco,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Colors.black12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
+      body: Column(
+        children: [
+          _buildFormulario(),
+          Expanded(child: _buildMapa()),
+          _buildActionButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormulario() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('CREAR PARADA',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Complete los datos y toque el mapa para ubicar.',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 20),
+          _buildLabel('Nombre de la parada'),
+          TextField(
+              controller: _nombreCtrl,
+              decoration: _inputStyle(Icons.location_on)),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'CREAR PARADA',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Seleccione un punto en el mapa y complete la información.',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14,
-                        fontWeight: FontWeight.normal,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                    _buildLabel('ID Ruta (Ej: R4)'),
                     TextField(
-                      controller: _nombreCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Nombre de la parada',
-                        labelStyle: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black54,
-                        ),
-                        filled: true,
-                        fillColor: grisFondo,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _referenciaCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Referencia',
-                        labelStyle: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black54,
-                        ),
-                        filled: true,
-                        fillColor: grisFondo,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _selectedPoint == null
-                          ? 'Toque el mapa para ubicar la parada.'
-                          : 'Ubicación: ${_selectedPoint!.latitude.toStringAsFixed(6)}, ${_selectedPoint!.longitude.toStringAsFixed(6)}',
-                      style: const TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black54,
-                      ),
-                    ),
+                        controller: _idRutaCtrl,
+                        // ✅ CAMBIO REALIZADO: Ahora permite texto (letras y números)
+                        keyboardType: TextInputType.text,
+                        decoration: _inputStyle(Icons.alt_route)),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: mapCenter,
-                    initialZoom: 15,
-                    onTap: (_, point) => _handleMapTap(point),
-                  ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.transtunja.admin',
-                      tileProvider: CancellableNetworkTileProvider(),
-                    ),
-                    if (_selectedPoint != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: _selectedPoint!,
-                            width: 54,
-                            height: 54,
-                            child: const _ParadaPinIcon(size: 52),
-                          ),
-                        ],
+                    _buildLabel('Día'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                          color: grisFondo,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _diaSeleccionado,
+                          isExpanded: true,
+                          items: _diasSemana
+                              .map((s) =>
+                                  DropdownMenuItem(value: s, child: Text(s)))
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _diaSeleccionado = val!),
+                        ),
                       ),
+                    ),
                   ],
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapa() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: tunjaCenter,
+            initialZoom: 14,
+            onTap: _handleMapTap,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.transtunja.app',
+              tileProvider: CancellableNetworkTileProvider(),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSaving ? null : _restablecer,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: azul,
-                      side: const BorderSide(color: azul),
-                      backgroundColor: blanco,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Restablecer',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+            if (_selectedPoint != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selectedPoint!,
+                    width: 50,
+                    height: 50,
+                    child: const Icon(Icons.location_on,
+                        color: rojoPrincipal, size: 45),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _confirmarGuardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: verde,
-                      foregroundColor: blanco,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: blanco,
-                            ),
-                          )
-                        : const Text(
-                            'Guardar',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
-}
 
-class _ParadaPinIcon extends StatelessWidget {
-  const _ParadaPinIcon({required this.size});
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 4),
+      child: Text(text,
+          style: const TextStyle(
+              color: Color(0xFF8D6E63),
+              fontSize: 13,
+              fontWeight: FontWeight.w500)),
+    );
+  }
 
-  final double size;
+  InputDecoration _inputStyle(IconData icon) {
+    return InputDecoration(
+      prefixIcon: Icon(icon, color: Colors.black87, size: 20),
+      filled: true,
+      fillColor: grisFondo,
+      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size + 6,
-      child: Stack(
-        alignment: Alignment.topCenter,
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
         children: [
-          Icon(Icons.location_on, size: size, color: const Color(0xFFD10000)),
-          Positioned(
-            top: size * 0.22,
-            child: Container(
-              width: size * 0.32,
-              height: size * 0.32,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'P',
-                style: TextStyle(
-                  fontSize: size * 0.16,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black,
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed: _restablecer,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFBDBDBD)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
+                child: const Text('Limpiar',
+                    style: TextStyle(
+                        color: Colors.grey, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isSaving ? null : _procesoGuardado,
+                child: _isSaving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('GUARDAR PARADA',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -391,110 +328,4 @@ class _ParadaPinIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<bool?> _showActionDialog({
-  required BuildContext context,
-  required String title,
-  required String message,
-  required String yesText,
-  required String noText,
-  required Color yesColor,
-  required Color noColor,
-}) {
-  return showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(false),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: noColor,
-                            side: BorderSide(color: noColor),
-                          ),
-                          child: Text(
-                            noText,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: yesColor,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text(
-                            yesText,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
 }
