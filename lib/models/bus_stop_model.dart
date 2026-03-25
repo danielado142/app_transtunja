@@ -5,7 +5,7 @@ class BusStopModel {
   final LatLng position;
   final bool isMain;
 
-  BusStopModel({
+  const BusStopModel({
     required this.name,
     required this.position,
     this.isMain = false,

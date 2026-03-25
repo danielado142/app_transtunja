@@ -17,7 +17,6 @@ class RouteModel {
     required this.extra,
   });
 
-  // Este método será útil cuando conectes con tu PHP en XAMPP
   factory RouteModel.fromJson(Map<String, dynamic> json) {
     return RouteModel(
       id: json['id'].toString(),

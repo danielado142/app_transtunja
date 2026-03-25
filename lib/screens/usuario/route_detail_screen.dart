@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/route_model.dart';
+import 'map_screen.dart';
 
 class RouteDetailScreen extends StatelessWidget {
   final RouteModel route;
@@ -255,9 +256,15 @@ class RouteDetailScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Más adelante lo conectamos al mapa"),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MapScreen(
+                          onGoToRoutes: () {
+                            Navigator.pop(context);
+                          },
+                          selectedRoute: route,
+                        ),
                       ),
                     );
                   },

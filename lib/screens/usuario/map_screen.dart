@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-// Importaciones corregidas
 import '../../models/bus_stop_model.dart';
 import '../../models/destination_suggestion_model.dart';
 import '../../models/map_route_model.dart';
@@ -13,15 +12,20 @@ import 'route_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
   final VoidCallback onGoToRoutes;
+  final RouteModel? selectedRoute;
 
-  const MapScreen({super.key, required this.onGoToRoutes});
+  const MapScreen({
+    super.key,
+    required this.onGoToRoutes,
+    this.selectedRoute,
+  });
 
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
-  static const red = Color(0xFFD10000);
+  static const Color red = Color(0xFFD10000);
 
   final MapController _mapController = MapController();
   final MapService _mapService = MapService();
@@ -44,10 +48,11 @@ class _MapScreenState extends State<MapScreen> {
 
     try {
       final center = await _mapService.getMapCenter();
-      final route = await _mapService.getDemoRoute();
-      final stops = await _mapService.getBusStops();
-      final busPosition = await _mapService.getBusPosition();
-      final summary = await _mapService.getMapSummary();
+      final route = await _mapService.getRouteFor(widget.selectedRoute);
+      final stops = await _mapService.getBusStopsFor(widget.selectedRoute);
+      final busPosition =
+          await _mapService.getBusPositionFor(widget.selectedRoute);
+      final summary = await _mapService.getMapSummaryFor(widget.selectedRoute);
 
       if (!mounted) return;
 
@@ -59,16 +64,28 @@ class _MapScreenState extends State<MapScreen> {
         _summary = summary;
         _isLoading = false;
       });
+
+      if (_demoRoute != null && _demoRoute!.points.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _mapController.move(_demoRoute!.points.first, 14.8);
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al cargar mapa: $e')));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar mapa: $e')),
+      );
     }
   }
 
   void _goToMyLocation() {
+    if (_demoRoute != null && _demoRoute!.points.isNotEmpty) {
+      _mapController.move(_demoRoute!.points.first, 15.5);
+      return;
+    }
     _mapController.move(_tunjaCenter, 15.5);
   }
 
@@ -94,9 +111,9 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final routeName = _summary?.routeName ?? 'Ruta no disponible';
-    final stopName = _summary?.stopName ?? 'Parada no disponible';
-    final etaText = _summary?.etaText ?? '--';
+    final String routeName = _summary?.routeName ?? 'Ruta no disponible';
+    final String stopName = _summary?.stopName ?? 'Parada no disponible';
+    final String etaText = _summary?.etaText ?? '--';
 
     return Scaffold(
       appBar: AppBar(
@@ -104,9 +121,9 @@ class _MapScreenState extends State<MapScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'TRANSTUNJA',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        title: Text(
+          widget.selectedRoute != null ? 'Mapa de ruta' : 'TRANSTUNJA',
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: SafeArea(
@@ -118,7 +135,10 @@ class _MapScreenState extends State<MapScreen> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _tunjaCenter,
+                      initialCenter:
+                          (_demoRoute != null && _demoRoute!.points.isNotEmpty)
+                              ? _demoRoute!.points.first
+                              : _tunjaCenter,
                       initialZoom: 14.5,
                       minZoom: 12,
                       maxZoom: 18,
@@ -144,8 +164,8 @@ class _MapScreenState extends State<MapScreen> {
                           ..._stops.map(
                             (stop) => Marker(
                               point: stop.position,
-                              width: 90,
-                              height: 70,
+                              width: 95,
+                              height: 74,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -215,43 +235,45 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    right: 16,
-                    child: _SearchBarButton(
-                      onTap: () => _openDestinationSheet(context),
-                    ),
-                  ),
-                  Positioned(
-                    top: 78,
-                    left: 16,
-                    right: 16,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _QuickChip(
-                            icon: Icons.alt_route,
-                            label: 'Rutas populares',
-                            onTap: widget.onGoToRoutes,
-                          ),
-                          const SizedBox(width: 10),
-                          _QuickChip(
-                            icon: Icons.place_outlined,
-                            label: 'Paradas cercanas',
-                            onTap: _goToNearestStop,
-                          ),
-                          const SizedBox(width: 10),
-                          _QuickChip(
-                            icon: Icons.star_border,
-                            label: 'Favoritas',
-                            onTap: () {},
-                          ),
-                        ],
+                  if (widget.selectedRoute == null)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      right: 16,
+                      child: _SearchBarButton(
+                        onTap: () => _openDestinationSheet(context),
                       ),
                     ),
-                  ),
+                  if (widget.selectedRoute == null)
+                    Positioned(
+                      top: 78,
+                      left: 16,
+                      right: 16,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _QuickChip(
+                              icon: Icons.alt_route,
+                              label: 'Rutas populares',
+                              onTap: widget.onGoToRoutes,
+                            ),
+                            const SizedBox(width: 10),
+                            _QuickChip(
+                              icon: Icons.place_outlined,
+                              label: 'Paradas cercanas',
+                              onTap: _goToNearestStop,
+                            ),
+                            const SizedBox(width: 10),
+                            _QuickChip(
+                              icon: Icons.star_border,
+                              label: 'Favoritas',
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Positioned(
                     right: 16,
                     bottom: 190,
@@ -274,15 +296,16 @@ class _MapScreenState extends State<MapScreen> {
                       routeName: routeName,
                       onGoToRoutes: widget.onGoToRoutes,
                       onDetails: () {
-                        final route = RouteModel(
-                          id: 'map_temp',
-                          name: routeName,
-                          stop: stopName,
-                          eta: etaText,
-                          status: 'Activa',
-                          tag: '',
-                          extra: '',
-                        );
+                        final RouteModel route = widget.selectedRoute ??
+                            RouteModel(
+                              id: 'map_temp',
+                              name: routeName,
+                              stop: stopName,
+                              eta: etaText,
+                              status: 'Activa',
+                              tag: '',
+                              extra: '',
+                            );
 
                         Navigator.push(
                           context,
@@ -300,10 +323,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-// --- COMPONENTES DE APOYO (Widgets Privados) ---
-
 class _SearchBarButton extends StatelessWidget {
   final VoidCallback onTap;
+
   const _SearchBarButton({required this.onTap});
 
   @override
@@ -340,6 +362,7 @@ class _QuickChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
   const _QuickChip({
     required this.icon,
     required this.label,
@@ -361,7 +384,10 @@ class _QuickChip extends StatelessWidget {
             children: [
               Icon(icon, size: 18),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ],
           ),
         ),
@@ -387,7 +413,8 @@ class _BottomInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const red = Color(0xFFD10000);
+    const Color red = Color(0xFFD10000);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -473,6 +500,7 @@ class _BottomInfoCard extends StatelessWidget {
 class _DestinationSheet extends StatefulWidget {
   final VoidCallback onGoToRoutes;
   final MapService mapService;
+
   const _DestinationSheet({
     required this.onGoToRoutes,
     required this.mapService,
@@ -485,6 +513,7 @@ class _DestinationSheet extends StatefulWidget {
 class _DestinationSheetState extends State<_DestinationSheet> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+
   String _selected = '';
   List<DestinationSuggestionModel> _suggestions = [];
   bool _isLoading = true;
@@ -501,13 +530,17 @@ class _DestinationSheetState extends State<_DestinationSheet> {
   Future<void> _loadSuggestions() async {
     try {
       final suggestions = await widget.mapService.getDestinationSuggestions();
+
       if (!mounted) return;
+
       setState(() {
         _suggestions = suggestions;
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -520,7 +553,8 @@ class _DestinationSheetState extends State<_DestinationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + bottomInset),
       child: Column(
@@ -547,7 +581,9 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                     hintText: 'Escribe tu destino',
                     border: InputBorder.none,
                   ),
-                  onChanged: (v) => setState(() => _selected = v.trim()),
+                  onChanged: (value) {
+                    setState(() => _selected = value.trim());
+                  },
                 ),
               ),
               if (_controller.text.isNotEmpty)
@@ -565,13 +601,15 @@ class _DestinationSheetState extends State<_DestinationSheet> {
             const CircularProgressIndicator()
           else
             ..._suggestions.map(
-              (s) => _SuggestionTile(
-                text: s.text,
-                isSelected: _selected == s.text,
-                onTap: () => setState(() {
-                  _selected = s.text;
-                  _controller.text = s.text;
-                }),
+              (suggestion) => _SuggestionTile(
+                text: suggestion.text,
+                isSelected: _selected == suggestion.text,
+                onTap: () {
+                  setState(() {
+                    _selected = suggestion.text;
+                    _controller.text = suggestion.text;
+                  });
+                },
               ),
             ),
           const SizedBox(height: 14),
@@ -597,6 +635,7 @@ class _SuggestionTile extends StatelessWidget {
   final String text;
   final bool isSelected;
   final VoidCallback onTap;
+
   const _SuggestionTile({
     required this.text,
     required this.isSelected,
@@ -611,7 +650,9 @@ class _SuggestionTile extends StatelessWidget {
       title: Text(text),
       trailing: const Icon(Icons.chevron_right),
       selected: isSelected,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       tileColor: isSelected ? Colors.black12 : null,
     );
   }
