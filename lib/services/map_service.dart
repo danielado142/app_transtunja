@@ -5,9 +5,12 @@ import '../models/destination_suggestion_model.dart';
 import '../models/map_route_model.dart';
 import '../models/map_summary_model.dart';
 import '../models/route_model.dart';
+import 'routing_service.dart';
 
 class MapService {
   static const LatLng tunjaCenter = LatLng(5.5333, -73.3667);
+
+  final RoutingService _routingService = RoutingService();
 
   Future<LatLng> getMapCenter() async {
     return tunjaCenter;
@@ -21,45 +24,39 @@ class MapService {
   Future<MapRouteModel?> getRouteFor(RouteModel? route) async {
     final name = _normalizeRouteName(route);
 
+    List<LatLng> basePoints = [];
+
     if (name.contains('r2') || name.contains('centro - uptc')) {
-      return const MapRouteModel(
-        points: [
-          LatLng(5.5354, -73.3676),
-          LatLng(5.5367, -73.3645),
-          LatLng(5.5392, -73.3607),
-          LatLng(5.5430, -73.3568),
-        ],
-      );
-    }
-
-    if (name.contains('r5') || name.contains('terminal - centro')) {
-      return const MapRouteModel(
-        points: [
-          LatLng(5.5478, -73.3589),
-          LatLng(5.5441, -73.3608),
-          LatLng(5.5394, -73.3642),
-          LatLng(5.5358, -73.3671),
-        ],
-      );
-    }
-
-    if (name.contains('r8') || name.contains('unicentro - hospital')) {
-      return const MapRouteModel(
-        points: [
-          LatLng(5.5487, -73.3529),
-          LatLng(5.5457, -73.3552),
-          LatLng(5.5425, -73.3586),
-          LatLng(5.5398, -73.3621),
-        ],
-      );
-    }
-
-    return const MapRouteModel(
-      points: [
+      basePoints = const [
+        LatLng(5.5354, -73.3676),
+        LatLng(5.5430, -73.3568),
+      ];
+    } else if (name.contains('r5') || name.contains('terminal - centro')) {
+      basePoints = const [
+        LatLng(5.5478, -73.3589),
+        LatLng(5.5358, -73.3671),
+      ];
+    } else if (name.contains('r8') || name.contains('unicentro - hospital')) {
+      basePoints = const [
+        LatLng(5.5487, -73.3529),
+        LatLng(5.5398, -73.3621),
+      ];
+    } else {
+      basePoints = const [
         LatLng(5.5333, -73.3667),
         LatLng(5.5400, -73.3600),
-      ],
-    );
+      ];
+    }
+
+    try {
+      // 🔥 AQUÍ SE CONVIERTE EN RUTA REAL POR CARRETERAS
+      final routePoints = await _routingService.buildRoadPolyline(basePoints);
+
+      return MapRouteModel(points: routePoints);
+    } catch (e) {
+      // ⚠️ Si falla internet o API, usa línea normal
+      return MapRouteModel(points: basePoints);
+    }
   }
 
   Future<List<BusStopModel>> getBusStopsFor(RouteModel? route) async {
