@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class CrearParadaPage extends StatefulWidget {
   const CrearParadaPage({super.key});
@@ -38,21 +40,30 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
 
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _rutaController = TextEditingController();
-  final TextEditingController _referenciaController = TextEditingController();
   final MapController _mapController = MapController();
 
   LatLng _center = _tunjaCenter;
   LatLng? _selectedPoint;
   String? _diaSemanaSeleccionado;
   String _estadoSeleccionado = 'activo';
+  bool _formExpanded = true;
 
   @override
   void dispose() {
     _nombreController.dispose();
     _rutaController.dispose();
-    _referenciaController.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _irASeccionPrincipal(int index) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminDashboard(initialIndex: index),
+      ),
+      (route) => false,
+    );
   }
 
   void _showSnack(String texto, {bool isError = false}) {
@@ -71,19 +82,19 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
     setState(() {
       _nombreController.clear();
       _rutaController.clear();
-      _referenciaController.clear();
       _diaSemanaSeleccionado = null;
       _estadoSeleccionado = 'activo';
       _selectedPoint = null;
       _center = _tunjaCenter;
-      _mapController.move(_center, 14);
+      _formExpanded = true;
     });
+
+    _mapController.move(_center, 14);
   }
 
   void _saveStop() {
     final nombre = _nombreController.text.trim();
     final ruta = _rutaController.text.trim();
-    final referencia = _referenciaController.text.trim();
 
     if (nombre.isEmpty) {
       _showSnack('Ingrese el nombre de la parada', isError: true);
@@ -100,11 +111,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
       return;
     }
 
-    if (referencia.isEmpty) {
-      _showSnack('Ingrese una referencia', isError: true);
-      return;
-    }
-
     if (_selectedPoint == null) {
       _showSnack('Seleccione un punto en el mapa', isError: true);
       return;
@@ -113,11 +119,11 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
     final nuevaParada = {
       'nombre': nombre,
       'id_ruta': ruta.toUpperCase(),
-      'referencia': referencia,
       'dia_semana': _diaSemanaSeleccionado,
       'estado': _estadoSeleccionado,
       'latitud': _selectedPoint!.latitude,
       'longitud': _selectedPoint!.longitude,
+      'referencia': '',
     };
 
     Navigator.pop(context, nuevaParada);
@@ -128,8 +134,8 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
     IconData? icon,
   }) {
     return InputDecoration(
-      labelText: hintText,
-      labelStyle: const TextStyle(
+      hintText: hintText,
+      hintStyle: const TextStyle(
         fontSize: 14,
         color: Colors.black54,
       ),
@@ -166,73 +172,27 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            _buildTopPanel(),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.black12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _center,
-                      initialZoom: 14,
-                      onTap: (_, point) {
-                        setState(() {
-                          _selectedPoint = point;
-                        });
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.transtunja.app',
-                        tileProvider: CancellableNetworkTileProvider(),
-                      ),
-                      MarkerLayer(
-                        markers: _selectedPoint == null
-                            ? []
-                            : [
-                                Marker(
-                                  point: _selectedPoint!,
-                                  width: 40,
-                                  height: 40,
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    size: 40,
-                                    color: colorRojoApp,
-                                  ),
-                                ),
-                              ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildBottomButtons(),
-          ],
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Column(
+            children: [
+              _buildTopPanel(),
+              const SizedBox(height: 12),
+              Expanded(child: _buildMapCard()),
+              const SizedBox(height: 12),
+              _buildBottomButtons(),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar: const _TransTunjaBottomBar(currentIndex: 2),
+      bottomNavigationBar: TransTunjaBottomBar(
+        currentIndex: 2,
+        onTap: _irASeccionPrincipal,
+      ),
     );
   }
 
@@ -250,115 +210,260 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              setState(() {
+                _formExpanded = !_formExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorRojoApp.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.edit_note_rounded,
+                      color: colorRojoApp,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Datos de la parada',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: colorTextoPrincipal,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Toque para mostrar u ocultar el formulario',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _formExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 30,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: _formExpanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Complete la información y luego seleccione un punto en el mapa.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _nombreController,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: colorTextoPrincipal,
+                    ),
+                    decoration: _inputDecoration(
+                      hintText: 'Nombre de la parada',
+                      icon: Icons.location_on_outlined,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _rutaController,
+                    keyboardType: TextInputType.text,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: colorTextoPrincipal,
+                    ),
+                    decoration: _inputDecoration(
+                      hintText: 'Ruta',
+                      icon: Icons.alt_route_outlined,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: _diaSemanaSeleccionado,
+                    isExpanded: true,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: colorTextoPrincipal,
+                    ),
+                    decoration: _inputDecoration(
+                      hintText: 'Día de la semana',
+                      icon: Icons.calendar_today_outlined,
+                    ),
+                    items: _diasSemana
+                        .map(
+                          (dia) => DropdownMenuItem<String>(
+                            value: dia,
+                            child: Text(dia),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _diaSemanaSeleccionado = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: _estadoSeleccionado,
+                    isExpanded: true,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: colorTextoPrincipal,
+                    ),
+                    decoration: _inputDecoration(
+                      hintText: 'Estado',
+                      icon: Icons.toggle_on_outlined,
+                    ),
+                    items: _estados
+                        .map(
+                          (estado) => DropdownMenuItem<String>(
+                            value: estado,
+                            child: Text(estado),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _estadoSeleccionado = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
           children: [
-            const Text(
-              'Seleccione un punto en el mapa y complete la información.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _nombreController,
-              style: const TextStyle(
-                fontSize: 14,
-                color: colorTextoPrincipal,
-              ),
-              decoration: _inputDecoration(
-                hintText: 'Nombre de la parada',
-                icon: Icons.location_on_outlined,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _rutaController,
-              keyboardType: TextInputType.text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: colorTextoPrincipal,
-              ),
-              decoration: _inputDecoration(
-                hintText: 'Ruta',
-                icon: Icons.alt_route_outlined,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _referenciaController,
-              style: const TextStyle(
-                fontSize: 14,
-                color: colorTextoPrincipal,
-              ),
-              decoration: _inputDecoration(
-                hintText: 'Referencia',
-                icon: Icons.edit_location_alt_outlined,
-              ),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: _diaSemanaSeleccionado,
-              isExpanded: true,
-              style: const TextStyle(
-                fontSize: 14,
-                color: colorTextoPrincipal,
-              ),
-              decoration: _inputDecoration(
-                hintText: 'Día de la semana',
-                icon: Icons.calendar_today_outlined,
-              ),
-              items: _diasSemana
-                  .map(
-                    (dia) => DropdownMenuItem<String>(
-                      value: dia,
-                      child: Text(dia),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _diaSemanaSeleccionado = value;
-                });
-              },
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: _estadoSeleccionado,
-              isExpanded: true,
-              style: const TextStyle(
-                fontSize: 14,
-                color: colorTextoPrincipal,
-              ),
-              decoration: _inputDecoration(
-                hintText: 'Estado',
-                icon: Icons.toggle_on_outlined,
-              ),
-              items: _estados
-                  .map(
-                    (estado) => DropdownMenuItem<String>(
-                      value: estado,
-                      child: Text(estado),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _center,
+                initialZoom: 14,
+                onTap: (_, point) {
                   setState(() {
-                    _estadoSeleccionado = value;
+                    _selectedPoint = point;
                   });
-                }
-              },
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.transtunja.app',
+                  tileProvider: CancellableNetworkTileProvider(),
+                ),
+                MarkerLayer(
+                  markers: _selectedPoint == null
+                      ? []
+                      : [
+                          Marker(
+                            point: _selectedPoint!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.location_on,
+                              size: 40,
+                              color: colorRojoApp,
+                            ),
+                          ),
+                        ],
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Toque el mapa para ubicar la parada.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  _selectedPoint == null
+                      ? 'Toque el mapa para ubicar la parada.'
+                      : 'Ubicación seleccionada: '
+                          '${_selectedPoint!.latitude.toStringAsFixed(6)}, '
+                          '${_selectedPoint!.longitude.toStringAsFixed(6)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           ],
@@ -372,7 +477,7 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
       children: [
         Expanded(
           child: SizedBox(
-            height: 48,
+            height: 52,
             child: OutlinedButton(
               onPressed: _resetForm,
               style: OutlinedButton.styleFrom(
@@ -388,7 +493,7 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               child: const Text(
                 'Limpiar',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: colorLimpiarBorder,
                 ),
@@ -399,7 +504,7 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
         const SizedBox(width: 10),
         Expanded(
           child: SizedBox(
-            height: 48,
+            height: 52,
             child: ElevatedButton(
               onPressed: _saveStop,
               style: ElevatedButton.styleFrom(
@@ -413,7 +518,7 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
               child: const Text(
                 'Guardar',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -422,98 +527,6 @@ class _CrearParadaPageState extends State<CrearParadaPage> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TransTunjaBottomBar extends StatelessWidget {
-  const _TransTunjaBottomBar({required this.currentIndex});
-
-  static const Color colorRojoApp = Color(0xFFD10000);
-  final int currentIndex;
-
-  void _onItemTapped(BuildContext context, int index) {
-    if (index == currentIndex) return;
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/admin');
-        break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/rutas');
-        break;
-      case 2:
-        Navigator.pushReplacementNamed(context, '/paradas');
-        break;
-      case 3:
-        Navigator.pushReplacementNamed(context, '/conductores');
-        break;
-      case 4:
-        Navigator.pushReplacementNamed(context, '/perfil');
-        break;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: colorRojoApp,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: BottomNavigationBar(
-          currentIndex: currentIndex,
-          onTap: (index) => _onItemTapped(context, index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: colorRojoApp,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white70,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.admin_panel_settings_outlined),
-              activeIcon: Icon(Icons.admin_panel_settings),
-              label: 'Admin',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.alt_route_outlined),
-              activeIcon: Icon(Icons.alt_route),
-              label: 'Rutas',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.location_on_outlined),
-              activeIcon: Icon(Icons.location_on),
-              label: 'Paradas',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.directions_car_outlined),
-              activeIcon: Icon(Icons.directions_car),
-              label: 'Conductores',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Perfil',
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

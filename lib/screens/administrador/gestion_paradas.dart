@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/administrador/crear_parada.dart';
 import 'package:app_transtunja/screens/administrador/editar_parada.dart';
 import 'package:app_transtunja/screens/administrador/eliminar_parada.dart';
-import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class GestionParadas extends StatelessWidget {
   const GestionParadas({super.key});
@@ -14,10 +13,14 @@ class GestionParadas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return Container(
       color: grisFondo,
+      width: double.infinity,
+      height: double.infinity,
       child: SafeArea(
-        child: Padding(
+        top: false,
+        bottom: false,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
           child: Column(
             children: [
@@ -87,17 +90,17 @@ class _ActionButtonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: color,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: Colors.white),
+              Icon(icon, size: 20, color: Colors.white),
               const SizedBox(width: 10),
               Text(
                 text,

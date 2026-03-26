@@ -553,7 +553,6 @@ class _HistorialAsignacionesState extends State<HistorialAsignaciones> {
           ),
         ),
       ),
-      bottomNavigationBar: const TransTunjaBottomBar(currentIndex: 3),
     );
   }
 

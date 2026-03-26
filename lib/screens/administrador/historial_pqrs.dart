@@ -476,7 +476,6 @@ class _HistorialPQRSState extends State<HistorialPQRS> {
           ),
         ),
       ),
-      bottomNavigationBar: const TransTunjaBottomBar(currentIndex: 3),
     );
   }
 

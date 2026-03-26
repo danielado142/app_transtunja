@@ -438,7 +438,6 @@ class _AsignarConductorRutaState extends State<AsignarConductorRuta> {
           ),
         ),
       ),
-      bottomNavigationBar: const TransTunjaBottomBar(currentIndex: 3),
     );
   }
 
