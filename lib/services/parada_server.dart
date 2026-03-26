@@ -47,26 +47,46 @@ class ParadaService {
     }
   }
 
-  // --- MÉTODO PARA GUARDAR (NUEVO / EDICIÓN) ---
+  // --- MÉTODO PARA GUARDAR (UNIFICADO) ---
   Future<Map<String, dynamic>> guardarParadaDirecto(
       Map<String, dynamic> datos) async {
     try {
-      // Usamos editar_parada.php para que procese los cambios
-      final response = await http.post(
-        Uri.parse('$baseUrl/editar_parada.php'),
-        body: datos,
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/guardar_parada.php'),
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: json.encode(datos),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
+      print("RESPUESTA SERVIDOR: ${response.body}");
+
+      if (response.body.isNotEmpty) {
+        try {
+          return json.decode(response.body);
+        } catch (e) {
+          return {
+            "status": "error",
+            "message": "El servidor no respondió con un JSON válido."
+          };
+        }
       } else {
         return {
-          'status': 'error',
-          'message': 'Error en el servidor: ${response.statusCode}'
+          "status": "error",
+          "message": "El servidor devolvió una respuesta vacía"
         };
       }
+    } on TimeoutException {
+      return {
+        "status": "error",
+        "message": "Tiempo de espera agotado. Revisa tu conexión a Hostinger."
+      };
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      print("Error en guardarParadaDirecto: $e");
+      return {"status": "error", "message": "Error crítico: $e"};
     }
   }
 }

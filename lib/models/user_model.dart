@@ -1,5 +1,4 @@
 class UserModel {
-  final int id_usuario;
   final String name;
   final String email;
   final String phone;
@@ -8,7 +7,6 @@ class UserModel {
   final bool darkMode;
 
   UserModel({
-    required this.id_usuario,
     required this.name,
     required this.email,
     required this.phone,
@@ -17,19 +15,15 @@ class UserModel {
     this.darkMode = false,
   });
 
+  // Esto servirá para cuando conectes tu base de datos de XAMPP
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      // Evitamos el error de 'null' usando un valor por defecto si falla
-      id_usuario: json['id_usuario'] is int
-          ? json['id_usuario']
-          : int.parse(json['id_usuario']?.toString() ?? '0'),
-      name: json['nombre'] ?? '',
-      email: json['correo'] ?? '',
-      phone: json['telefono'] ?? '',
+      name: json['nombre'],
+      email: json['correo'],
+      phone: json['telefono'],
       gender: json['genero'],
-      notificationsEnabled:
-          (json['notificaciones'] == 1 || json['notificaciones'] == true),
-      darkMode: (json['modo_oscuro'] == 1 || json['modo_oscuro'] == true),
+      notificationsEnabled: json['notificaciones'] == 1,
+      darkMode: json['modo_oscuro'] == 1,
     );
   }
 }
