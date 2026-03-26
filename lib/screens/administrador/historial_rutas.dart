@@ -70,7 +70,7 @@ class _HistorialRutasState extends State<HistorialRutas> {
         nextScreen = const GestionConductores();
         break;
       case 4:
-        nextScreen = const _PerfilAdminPage();
+        nextScreen = const AdminDashboard(initialIndex: 4);
         break;
     }
 
@@ -592,115 +592,6 @@ class _HistorialRutasState extends State<HistorialRutas> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PerfilAdminPage extends StatelessWidget {
-  const _PerfilAdminPage();
-
-  static const Color _primaryRed = Color(0xFFD10000);
-  static const Color _background = Color(0xFFF6F6F7);
-
-  void _onBottomTap(BuildContext context, int index) {
-    Widget? nextScreen;
-
-    switch (index) {
-      case 0:
-        nextScreen = const AdminDashboard();
-        break;
-      case 1:
-        nextScreen = const HistorialRutas();
-        break;
-      case 2:
-        nextScreen = const GestionParadas();
-        break;
-      case 3:
-        nextScreen = const GestionConductores();
-        break;
-      case 4:
-        return;
-    }
-
-    if (nextScreen != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => nextScreen!),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(
-        backgroundColor: _primaryRed,
-        centerTitle: true,
-        elevation: 0,
-        title: const Text(
-          'PERFIL',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: const Center(
-        child: Text(
-          'Perfil de usuario',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black54,
-          ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 4,
-        onTap: (index) => _onBottomTap(context, index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: _primaryRed,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        showUnselectedLabels: true,
-        selectedFontSize: 13,
-        unselectedFontSize: 12,
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w800,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined, size: 24),
-            activeIcon: Icon(Icons.people_alt_rounded, size: 28),
-            label: 'Admin',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.alt_route_outlined, size: 24),
-            activeIcon: Icon(Icons.alt_route_rounded, size: 28),
-            label: 'Rutas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_on_outlined, size: 24),
-            activeIcon: Icon(Icons.location_on_rounded, size: 28),
-            label: 'Paradas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.drive_eta_outlined, size: 24),
-            activeIcon: Icon(Icons.drive_eta_rounded, size: 28),
-            label: 'Conductores',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline, size: 24),
-            activeIcon: Icon(Icons.person, size: 28),
-            label: 'Perfil',
-          ),
-        ],
       ),
     );
   }

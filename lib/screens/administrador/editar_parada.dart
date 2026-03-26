@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:app_transtunja/screens/administrador/admin_dashboard.dart';
 import 'package:app_transtunja/screens/administrador/parada_service.dart';
 import 'package:app_transtunja/models/parada_model.dart';
+import 'package:app_transtunja/widgets/trans_tunja_bottom_bar.dart';
 
 class EditarParadaPage extends StatefulWidget {
   final String apiBaseUrl;
@@ -40,6 +42,16 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
   void dispose() {
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _irASeccionPrincipal(int index) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminDashboard(initialIndex: index),
+      ),
+      (route) => false,
+    );
   }
 
   void _showSnack(String texto, {bool isError = false}) {
@@ -137,7 +149,6 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
 
     try {
       final res = await _paradaService.eliminarParada(parada.id.toString());
-
       final ok = res['success'] == true || res['status'] == 'success';
 
       if (ok) {
@@ -421,7 +432,10 @@ class _EditarParadaPageState extends State<EditarParadaPage> {
           ),
         ],
       ),
-      bottomNavigationBar: const _TransTunjaBottomBar(currentIndex: 2),
+      bottomNavigationBar: TransTunjaBottomBar(
+        currentIndex: 2,
+        onTap: _irASeccionPrincipal,
+      ),
     );
   }
 }
@@ -467,6 +481,16 @@ class _DetalleEdicionPageState extends State<DetalleEdicionPage> {
     _nombreCtrl.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _irASeccionPrincipal(int index) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminDashboard(initialIndex: index),
+      ),
+      (route) => false,
+    );
   }
 
   void _showSnack(String texto, {bool isError = false}) {
@@ -722,8 +746,13 @@ class _DetalleEdicionPageState extends State<DetalleEdicionPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
           ],
         ),
+      ),
+      bottomNavigationBar: TransTunjaBottomBar(
+        currentIndex: 2,
+        onTap: _irASeccionPrincipal,
       ),
     );
   }
@@ -764,98 +793,6 @@ class _ParadaPinIcon extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TransTunjaBottomBar extends StatelessWidget {
-  const _TransTunjaBottomBar({required this.currentIndex});
-
-  static const Color rojo = Color(0xFFD10000);
-  final int currentIndex;
-
-  void _onItemTapped(BuildContext context, int index) {
-    if (index == currentIndex) return;
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/admin');
-        break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/rutas');
-        break;
-      case 2:
-        Navigator.pushReplacementNamed(context, '/paradas');
-        break;
-      case 3:
-        Navigator.pushReplacementNamed(context, '/conductores');
-        break;
-      case 4:
-        Navigator.pushReplacementNamed(context, '/perfil');
-        break;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: rojo,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: BottomNavigationBar(
-          currentIndex: currentIndex,
-          onTap: (index) => _onItemTapped(context, index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: rojo,
-          elevation: 0,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white70,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.admin_panel_settings_outlined),
-              activeIcon: Icon(Icons.admin_panel_settings),
-              label: 'Admin',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.alt_route_outlined),
-              activeIcon: Icon(Icons.alt_route),
-              label: 'Rutas',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.location_on_outlined),
-              activeIcon: Icon(Icons.location_on),
-              label: 'Paradas',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.directions_car_outlined),
-              activeIcon: Icon(Icons.directions_car),
-              label: 'Conductores',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Perfil',
-            ),
-          ],
-        ),
       ),
     );
   }
