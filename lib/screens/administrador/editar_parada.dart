@@ -11,7 +11,8 @@ class EditarParadaPage extends StatefulWidget {
 
   const EditarParadaPage({
     super.key,
-    this.apiBaseUrl = 'https://tudominio.com/transtunja',
+    this.apiBaseUrl =
+        'https://springgreen-ferret-866521.hostingersite.com/TransTunja/api',
   });
 
   @override
