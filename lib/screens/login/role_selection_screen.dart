@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../administrador/admin_verification_screen.dart';
-import '../conductor/verificacion_conductor.dart';
-import '../usuario/user_home_screen.dart'; // ✅ Importación correcta
+import '../usuario/user_home_screen.dart'; 
+// ✅ Importamos tu pantalla de conductor
+import '../conductor/home_conductor.dart';
+// Asegúrate de que la ruta sea donde guardaste tu archivo del Home
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -16,22 +18,23 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
+  // 🔥 AJUSTE AQUÍ: Ahora va directo a tu HomeConductor con el correo real
   void _goToDriver(BuildContext context) {
-    // 🔥 CAMBIO CLAVE: Extraemos el correo del userData que viene del Login
-    // Si por alguna razón no viene (ej. login con Google), usamos un valor por defecto
-    String emailConductor = userData['correo'] ?? "conductor@mail.com";
+    // Extraemos el correo que viene del LoginScreen
+    String emailConductor = userData['correo'] ?? userData['email'] ?? "conductor@mail.com";
+    String nombreConductor = userData['nombre'] ?? userData['nombreUsuario'] ?? "Conductor";
 
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => DriverVerificationScreen(
-          correoLogin: emailConductor, // 👈 Pasamos el correo real aquí
+        builder: (context) => HomeConductor(
+          correoConductor: emailConductor, 
+          nombreConductor: nombreConductor,
         ),
       ),
     );
   }
 
-  // --- ALERTA CORREGIDA PARA DIRIGIR A USER_HOME_SCREEN ---
   void _showUserAlert(BuildContext context) {
     showDialog(
       context: context,
@@ -67,9 +70,7 @@ class RoleSelectionScreen extends StatelessWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                Navigator.pop(context); // Cierra la alerta
-
-                // ✅ CAMBIO AQUÍ: Navegamos directamente a la clase UserHomeScreen
+                Navigator.pop(context); 
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -110,7 +111,6 @@ class RoleSelectionScreen extends StatelessWidget {
               child: SafeArea(
                 child: Center(
                   child: Text(
-                    // ✅ Usamos 'nombre' que es como suele venir del login.php
                     '¿Qué rol tendrás hoy,\n${userData['nombre'] ?? userData['nombreUsuario'] ?? 'Usuario'}?',
                     textAlign: TextAlign.center,
                     style: const TextStyle(

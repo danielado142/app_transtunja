@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // ✅ La URL ahora usa ApiConfig que apunta a Hostinger
+    // ✅ La URL apunta a tu API en Hostinger
     final String urlApi = '${ApiConfig.baseUrl}/login.php';
 
     try {
@@ -65,9 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (data['status'] == 'success') {
         if (!mounted) return;
 
-        // ✅ NAVEGACIÓN ACTUALIZADA:
-        // Enviamos data['user'] que contiene la info del usuario (incluyendo el correo)
-        // a la siguiente pantalla de selección de rol.
+        // ✅ VÍNCULO DINÁMICO:
+        // Mandamos los datos del usuario (que incluyen el correo) a la selección de rol.
+        // Esto permite que el HomeConductor sepa qué perfil cargar.
         Navigator.pushReplacementNamed(
           context,
           '/role_selection',
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   context,
                 );
                 if (userCredential != null && mounted) {
-                  // ✅ Si entra con Google, también lo mandamos a selección de rol
+                  // ✅ También vinculamos el login de Google con la selección de rol
                   Navigator.pushReplacementNamed(
                     context,
                     '/role_selection',
