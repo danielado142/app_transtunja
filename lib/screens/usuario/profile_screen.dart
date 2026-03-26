@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Importaciones con la ruta absoluta del proyecto (ajustar 'app_transtunja' si es necesario)
+// Importaciones con la ruta absoluta del proyecto
 import 'package:app_transtunja/models/user_model.dart';
 import 'package:app_transtunja/services/profile_service.dart';
 
@@ -35,13 +35,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final user = await _profileService.getUserProfile();
-
       if (!mounted) return;
 
       setState(() {
@@ -50,148 +47,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al cargar perfil: $e')));
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar perfil: $e')),
+      );
     }
   }
 
   Future<void> _openEditProfile() async {
     if (_user == null) return;
 
-    final result = await Navigator.push(
+    // Navegamos pasando únicamente el objeto user
+    final updatedUser = await Navigator.push<UserModel>(
       context,
       MaterialPageRoute(
-        builder: (_) => EditProfileScreen(
-          initialName: _user!.name,
-          initialEmail: _user!.email,
-          initialPhone: _user!.phone,
-          initialGender: _user!.gender ?? '',
-        ),
+        builder: (_) => EditProfileScreen(user: _user!),
       ),
     );
 
-    if (result != null && result is Map<String, dynamic>) {
-      try {
-        final updatedUser = await _profileService.updateUserProfile(
-          name: result['name'] as String? ?? _user!.name,
-          email: result['email'] as String? ?? _user!.email,
-          phone: result['phone'] as String? ?? _user!.phone,
-          gender: result['gender'] as String? ?? _user!.gender ?? '',
-        );
+    // Verificamos si regresó un usuario actualizado
+    if (updatedUser != null && mounted) {
+      setState(() {
+        _user = updatedUser;
+      });
 
-        if (!mounted) return;
-
-        setState(() {
-          _user = updatedUser;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil actualizado correctamente')),
-        );
-      } catch (e) {
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al actualizar perfil: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Perfil actualizado correctamente'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   Future<void> _updateNotifications(bool value) async {
     if (_user == null || _isUpdatingPreferences) return;
-
-    setState(() {
-      _isUpdatingPreferences = true;
-    });
+    setState(() => _isUpdatingPreferences = true);
 
     try {
       final updatedUser = await _profileService.updatePreferences(
         notificationsEnabled: value,
       );
-
-      if (!mounted) return;
-
-      setState(() {
-        _user = updatedUser;
-      });
+      if (mounted) setState(() => _user = updatedUser);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar preferencias: $e')),
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isUpdatingPreferences = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isUpdatingPreferences = false);
     }
   }
 
   Future<void> _updateDarkMode(bool value) async {
     if (_user == null || _isUpdatingPreferences) return;
-
-    setState(() {
-      _isUpdatingPreferences = true;
-    });
+    setState(() => _isUpdatingPreferences = true);
 
     try {
       final updatedUser = await _profileService.updatePreferences(
         darkMode: value,
       );
-
-      if (!mounted) return;
-
-      setState(() {
-        _user = updatedUser;
-      });
+      if (mounted) setState(() => _user = updatedUser);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar preferencias: $e')),
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isUpdatingPreferences = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isUpdatingPreferences = false);
     }
   }
 
   Future<void> _logout() async {
     if (_isLoggingOut) return;
-
-    setState(() {
-      _isLoggingOut = true;
-    });
+    setState(() => _isLoggingOut = true);
 
     try {
       await _profileService.logout();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Sesión cerrada con éxito')));
-      // Aquí podrías redirigir al Login:
-      // Navigator.pushReplacementNamed(context, '/login');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesión cerrada con éxito')),
+      );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al cerrar sesión: $e')));
-    } finally {
       if (mounted) {
-        setState(() {
-          _isLoggingOut = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cerrar sesión: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
     }
   }
 
@@ -211,10 +158,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('No se pudo cargar la información.'),
+              const Text('No se pudo cargar la información.',
+                  style: TextStyle(fontSize: 16, color: Colors.black54)),
+              const SizedBox(height: 15),
               ElevatedButton(
                 onPressed: _loadProfile,
-                child: const Text('Reintentar'),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: red,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10))),
+                child: const Text('Reintentar',
+                    style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -251,23 +207,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SwitchListTile(
                     value: _user!.notificationsEnabled,
                     activeColor: red,
-                    onChanged: _isUpdatingPreferences
-                        ? null
-                        : _updateNotifications,
-                    title: const Text(
-                      'Recibir notificaciones',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                    onChanged:
+                        _isUpdatingPreferences ? null : _updateNotifications,
+                    title: const Text('Recibir notificaciones',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                     secondary: const Icon(Icons.notifications_none),
                   ),
                   SwitchListTile(
                     value: _user!.darkMode,
                     activeColor: red,
                     onChanged: _isUpdatingPreferences ? null : _updateDarkMode,
-                    title: const Text(
-                      'Modo oscuro',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                    title: const Text('Modo oscuro',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                     secondary: const Icon(Icons.dark_mode_outlined),
                   ),
                 ],
@@ -276,19 +227,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _SectionCard(
                 title: 'Cuenta',
                 children: [
-                  _buildListTile(
-                    Icons.person_outline,
-                    'Editar datos personales',
-                    _openEditProfile,
-                  ),
-                  const Divider(height: 1),
+                  _buildListTile(Icons.person_outline,
+                      'Editar datos personales', _openEditProfile),
+                  const Divider(height: 1, indent: 50),
                   _buildListTile(Icons.lock_outline, 'Cambiar contraseña', () {
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ChangePasswordScreen(),
-                      ),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ChangePasswordScreen()));
                   }),
                 ],
               ),
@@ -298,20 +244,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _buildListTile(Icons.help_outline, 'Centro de ayuda', () {
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const HelpCenterScreen(),
-                      ),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const HelpCenterScreen()));
                   }),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 50),
                   _buildListTile(Icons.accessibility_new, 'Accesibilidad', () {
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AccessibilityScreen(),
-                      ),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AccessibilityScreen()));
                   }),
                 ],
               ),
@@ -330,10 +272,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
-      title: const Text(
-        'Perfil',
-        style: TextStyle(fontWeight: FontWeight.w800),
-      ),
+      title:
+          const Text('Perfil', style: TextStyle(fontWeight: FontWeight.w800)),
     );
   }
 
@@ -345,10 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-            blurRadius: 10,
-            color: Colors.black12,
-            offset: Offset(0, 4),
-          ),
+              blurRadius: 10, color: Colors.black12, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -375,16 +312,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            user.name,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-          ),
+          Text(user.name,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
           Text(user.email, style: const TextStyle(color: Colors.black54)),
           if (subtitle.isNotEmpty)
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.black45, fontSize: 12),
-            ),
+            Text(subtitle,
+                style: const TextStyle(color: Colors.black45, fontSize: 12)),
         ],
       ),
     );
@@ -392,9 +326,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildListTile(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-      trailing: const Icon(Icons.chevron_right),
+      leading: Icon(icon, color: Colors.black87),
+      title: Text(title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      trailing:
+          const Icon(Icons.chevron_right, size: 20, color: Colors.black38),
       onTap: onTap,
     );
   }
@@ -406,16 +342,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? const SizedBox(
               height: 18,
               width: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
+              child: CircularProgressIndicator(strokeWidth: 2, color: red))
           : const Icon(Icons.logout),
-      label: const Text(
-        'Cerrar sesión',
-        style: TextStyle(fontWeight: FontWeight.w900),
-      ),
+      label: const Text('Cerrar sesión',
+          style: TextStyle(fontWeight: FontWeight.w900)),
       style: OutlinedButton.styleFrom(
         foregroundColor: red,
-        side: const BorderSide(color: red),
+        side: const BorderSide(color: red, width: 1.5),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
@@ -428,6 +361,8 @@ class _SectionCard extends StatelessWidget {
   final List<Widget> children;
   const _SectionCard({required this.title, required this.children});
 
+  Color? get red => null;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -436,10 +371,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-            blurRadius: 10,
-            color: Colors.black12,
-            offset: Offset(0, 4),
-          ),
+              blurRadius: 10, color: Colors.black12, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -447,10 +379,9 @@ class _SectionCard extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-            ),
+            child: Text(title,
+                style: TextStyle(
+                    fontWeight: FontWeight.w900, fontSize: 15, color: red)),
           ),
           ...children,
         ],

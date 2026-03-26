@@ -1,48 +1,35 @@
 import 'package:flutter/material.dart';
+import '../../models/user_model.dart';
+import '../../services/profile_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  final String initialName;
-  final String initialEmail;
-  final String initialPhone;
-  final String? initialGender;
+  final UserModel user;
 
-  const EditProfileScreen({
-    super.key,
-    required this.initialName,
-    required this.initialEmail,
-    required this.initialPhone,
-    required this.initialGender,
-  });
+  const EditProfileScreen({super.key, required this.user});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  static const red = Color(0xFFD10000);
-
   final _formKey = GlobalKey<FormState>();
+  final ProfileService _profileService = ProfileService();
 
-  late final TextEditingController _nameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _phoneController;
-
+  // Controladores para los campos de texto
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
   String? _selectedGender;
-  bool _saving = false;
-
-  final List<String> _genders = const [
-    'Femenino',
-    'Masculino',
-    'Prefiero no decirlo',
-  ];
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialName);
-    _emailController = TextEditingController(text: widget.initialEmail);
-    _phoneController = TextEditingController(text: widget.initialPhone);
-    _selectedGender = widget.initialGender;
+    // Llenamos los campos con la info actual del usuario
+    _nameController = TextEditingController(text: widget.user.name);
+    _emailController = TextEditingController(text: widget.user.email);
+    _phoneController = TextEditingController(text: widget.user.phone);
+    _selectedGender = widget.user.gender ?? "Masculino";
   }
 
   @override
@@ -53,217 +40,136 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // FUNCIÓN CRUCIAL: Envía los datos a Hostinger
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _saving = true);
+    setState(() => _isSaving = true);
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      // Llamamos al servicio con la URL que me pasaste
+      final updatedUser = await _profileService.updateUserProfile(
+        userId: widget.user.id_usuario.toString(),
+        name: _nameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        gender: _selectedGender!,
+      );
 
-    if (!mounted) return;
-
-    Navigator.pop(context, {
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'gender': _selectedGender,
-    });
+      if (mounted) {
+        // Regresamos a la pantalla de Perfil enviando el nuevo usuario
+        Navigator.pop(context, updatedUser);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error al guardar: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    const redColor = Color(0xFFD10000);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F7),
       appBar: AppBar(
-        backgroundColor: red,
+        title: const Text('Editar Perfil',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: redColor,
         foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Editar perfil',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
       ),
-      body: SafeArea(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(
-                      blurRadius: 8,
-                      color: Colors.black12,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Actualiza tu información',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Revisa y edita tus datos personales para mantener tu perfil actualizado.',
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Datos personales',
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Nombre completo',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'El nombre es obligatorio';
-                        }
-                        if (value.trim().length < 4) {
-                          return 'Escribe un nombre válido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Correo electrónico',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'El correo es obligatorio';
-                        }
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Escribe un correo válido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Teléfono',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _selectedGender,
-                      decoration: InputDecoration(
-                        labelText: 'Género',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      items: _genders
-                          .map(
-                            (gender) => DropdownMenuItem(
-                              value: gender,
-                              child: Text(gender),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => _selectedGender = value);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _saving ? null : _saveProfile,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(
-                    _saving ? 'Guardando...' : 'Guardar cambios',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: red,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
+              _buildInputCard(),
+              const SizedBox(height: 30),
+              _buildSaveButton(redColor),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildInputCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(blurRadius: 8, color: Colors.black12, offset: Offset(0, 3)),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          _buildTextField(_nameController, 'Nombre', Icons.person),
+          const SizedBox(height: 15),
+          _buildTextField(_emailController, 'Correo', Icons.email,
+              keyboardType: TextInputType.emailAddress),
+          const SizedBox(height: 15),
+          _buildTextField(_phoneController, 'Teléfono', Icons.phone,
+              keyboardType: TextInputType.phone),
+          const SizedBox(height: 15),
+          DropdownButtonFormField<String>(
+            value: _selectedGender,
+            decoration: InputDecoration(
+              labelText: 'Género',
+              prefixIcon: const Icon(Icons.wc),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+            items: ['Masculino', 'Femenino', 'Otro']
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (val) => setState(() => _selectedGender = val),
           ),
-          const SizedBox(height: 12),
-          child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      TextEditingController controller, String label, IconData icon,
+      {TextInputType? keyboardType}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+      ),
+      validator: (value) => value!.isEmpty ? 'Este campo es obligatorio' : null,
+    );
+  }
+
+  Widget _buildSaveButton(Color color) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        child: _isSaving
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Guardar Cambios',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
       ),
     );
   }

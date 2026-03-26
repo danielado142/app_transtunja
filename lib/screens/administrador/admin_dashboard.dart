@@ -52,10 +52,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   bool get _mostrarFlechaAtras {
-    return _currentIndex == 1 ||
-        _currentIndex == 2 ||
-        _currentIndex == 3 ||
-        _currentIndex == 4;
+    return _currentIndex != 0;
   }
 
   @override
@@ -135,64 +132,51 @@ class _AdminHomeView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text('Crear ruta'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  onCambiarSeccion(1);
-                },
+              // --- BOTÓN CREAR RUTA ---
+              _buildHomeButton(
+                label: 'Crear ruta',
+                icon: Icons.add,
+                color: Colors.green,
+                onPressed: () => onCambiarSeccion(1),
               ),
               const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.history),
-                label: const Text('Historial de rutas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
+
+              // --- BOTÓN HISTORIAL (CORREGIDO) ---
+              _buildHomeButton(
+                label: 'Historial de rutas',
+                icon: Icons.history,
+                color: Colors.blue,
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const HistorialRutas(apiBaseUrl: '/transtunja'),
+                      // Aquí se quitó el parámetro apiBaseUrl que causaba el error
+                      builder: (_) => const HistorialRutas(),
                     ),
                   );
                 },
               ),
               const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.location_on),
-                label: const Text('Gestión de paradas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorRojoApp,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  onCambiarSeccion(2);
-                },
+
+              // --- BOTÓN PARADAS ---
+              _buildHomeButton(
+                label: 'Gestión de paradas',
+                icon: Icons.location_on,
+                color: colorRojoApp,
+                onPressed: () => onCambiarSeccion(2),
               ),
               const SizedBox(height: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.person),
-                label: const Text('Gestión de conductores'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () {
-                  onCambiarSeccion(3);
-                },
+
+              // --- BOTÓN CONDUCTORES ---
+              _buildHomeButton(
+                label: 'Gestión de conductores',
+                icon: Icons.person,
+                color: Colors.deepOrange,
+                onPressed: () => onCambiarSeccion(3),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
+
+              // --- LOGO ---
               Center(
                 child: SizedBox(
                   width: logoSize,
@@ -200,14 +184,43 @@ class _AdminHomeView extends StatelessWidget {
                   child: Image.asset(
                     'assets/logo.png',
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.directions_bus,
+                        size: 80,
+                        color: Colors.grey),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // Widget auxiliar para mantener el código limpio y los botones uniformes
+  Widget _buildHomeButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      icon: Icon(icon),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 55),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 2,
+      ),
+      onPressed: onPressed,
     );
   }
 }
