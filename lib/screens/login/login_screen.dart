@@ -58,18 +58,20 @@ class _LoginScreenState extends State<LoginScreen> {
           )
           .timeout(
             const Duration(seconds: 15),
-          ); // Un poco más de tiempo por ser nube
+          ); 
 
       final data = jsonDecode(response.body);
 
       if (data['status'] == 'success') {
         if (!mounted) return;
 
-        // ✅ CORRECCIÓN: Usamos 'user' que es como responde tu PHP
+        // ✅ NAVEGACIÓN ACTUALIZADA:
+        // Enviamos data['user'] que contiene la info del usuario (incluyendo el correo)
+        // a la siguiente pantalla de selección de rol.
         Navigator.pushReplacementNamed(
           context,
           '/role_selection',
-          arguments: data['user'],
+          arguments: data['user'], 
         );
       } else {
         if (!mounted) return;
@@ -79,7 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      // ✅ Mensaje actualizado (ya no menciona XAMPP)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error de conexión con el servidor: $e")),
       );
@@ -97,7 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: <Widget>[
             const SizedBox(height: 100),
-            // --- TU DISEÑO ORIGINAL SE MANTIENE ---
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 25.0,
@@ -195,8 +195,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   context,
                 );
                 if (userCredential != null && mounted) {
-                  debugPrint(
-                    "Login exitoso con Google: ${userCredential.user?.email}",
+                  // ✅ Si entra con Google, también lo mandamos a selección de rol
+                  Navigator.pushReplacementNamed(
+                    context,
+                    '/role_selection',
+                    arguments: {
+                      'correo': userCredential.user?.email,
+                      'nombre': userCredential.user?.displayName,
+                    },
                   );
                 }
               },

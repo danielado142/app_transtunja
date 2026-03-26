@@ -17,9 +17,17 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 
   void _goToDriver(BuildContext context) {
+    // 🔥 CAMBIO CLAVE: Extraemos el correo del userData que viene del Login
+    // Si por alguna razón no viene (ej. login con Google), usamos un valor por defecto
+    String emailConductor = userData['correo'] ?? "conductor@mail.com";
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const DriverVerificationScreen()),
+      MaterialPageRoute(
+        builder: (context) => DriverVerificationScreen(
+          correoLogin: emailConductor, // 👈 Pasamos el correo real aquí
+        ),
+      ),
     );
   }
 
@@ -102,7 +110,8 @@ class RoleSelectionScreen extends StatelessWidget {
               child: SafeArea(
                 child: Center(
                   child: Text(
-                    '¿Qué rol tendrás hoy,\n${userData['nombreUsuario'] ?? 'Usuario'}?',
+                    // ✅ Usamos 'nombre' que es como suele venir del login.php
+                    '¿Qué rol tendrás hoy,\n${userData['nombre'] ?? userData['nombreUsuario'] ?? 'Usuario'}?',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
-  const DriverVerificationScreen({super.key});
+  // 👈 Agregamos esto para recibir el correo de quien sea que esté entrando
+  final String correoLogin; 
+
+  const DriverVerificationScreen({super.key, this.correoLogin = "conductor@mail.com"});
 
   @override
   State<DriverVerificationScreen> createState() =>
@@ -71,15 +74,17 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
             child: TextButton(
               onPressed: () {
                 // 2. NAVEGACIÓN HACIA EL HOME
-                // Cerramos el diálogo primero
                 Navigator.pop(context);
 
-                // Vamos al Home y limpiamos la pila para que no pueda volver atrás al login
+                // 🔥 AQUÍ ESTÁ EL CAMBIO CLAVE:
+                // Usamos widget.correoLogin para que el Home sepa a quién buscar en el hosting
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const HomeConductor(
-                        nombreConductor: "Conductor Verificado"),
+                    builder: (context) => HomeConductor(
+                      nombreConductor: "Cargando...", // Se actualizará solo con el saludo
+                      correoConductor: widget.correoLogin, 
+                    ),
                   ),
                   (route) => false,
                 );
@@ -99,7 +104,6 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
     );
   }
 
-  // ... (El resto de tus métodos _mostrarError y build se mantienen igual)
   void _mostrarError() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
