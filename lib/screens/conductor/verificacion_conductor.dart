@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
 
 class DriverVerificationScreen extends StatefulWidget {
-  // 👈 Agregamos esto para recibir el correo de quien sea que esté entrando
+  // 👈 Recibimos el correo del login
   final String correoLogin; 
 
   const DriverVerificationScreen({super.key, this.correoLogin = "conductor@mail.com"});
@@ -76,14 +76,16 @@ class _DriverVerificationScreenState extends State<DriverVerificationScreen> {
                 // 2. NAVEGACIÓN HACIA EL HOME
                 Navigator.pop(context);
 
-                // 🔥 AQUÍ ESTÁ EL CAMBIO CLAVE:
-                // Usamos widget.correoLogin para que el Home sepa a quién buscar en el hosting
+                // 🔥 CORRECCIÓN AQUÍ:
+                // Se envía el mapa 'userData' para que coincida con el nuevo constructor
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
                     builder: (context) => HomeConductor(
-                      nombreConductor: "Cargando...", // Se actualizará solo con el saludo
-                      correoConductor: widget.correoLogin, 
+                      userData: {
+                        'nombre': "Cargando...", 
+                        'correo': widget.correoLogin, 
+                      },
                     ),
                   ),
                   (route) => false,

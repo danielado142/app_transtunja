@@ -5,8 +5,9 @@ import 'package:latlong2/latlong.dart';
 class RoutingService {
   RoutingService({http.Client? client, String? osrmBaseUrl})
     : _client = client ?? http.Client(),
-      _osrmBaseUrl = osrmBaseUrl ?? 'https://router.project-osrm.org';
-
+      // ✅ Cambiamos el servidor oficial por uno más estable
+      _osrmBaseUrl = osrmBaseUrl ?? 'https://router.openstreetmap.de';
+      
   final http.Client _client;
   final String _osrmBaseUrl;
 

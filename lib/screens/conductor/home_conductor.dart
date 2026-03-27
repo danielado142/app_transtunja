@@ -4,13 +4,12 @@ import 'reportes_conductor.dart';
 import 'perfil_conductor_screen.dart';
 
 class HomeConductor extends StatefulWidget {
-  final String nombreConductor;
-  final String correoConductor;
+  // ✅ CAMBIO: Ahora recibe el mapa completo para que el Main no marque error
+  final Map<String, dynamic> userData;
 
   const HomeConductor({
     super.key,
-    required this.nombreConductor,
-    required this.correoConductor,
+    required this.userData,
   });
 
   @override
@@ -28,22 +27,30 @@ class _HomeConductorState extends State<HomeConductor> {
   @override
   void initState() {
     super.initState();
+    
+    // ✅ Extraemos los datos del mapa de forma segura
+    final String correo = widget.userData['correo'] ?? '';
+
     screens = [
       const RutaActualScreen(),
       const ReportesScreen(),
-      PerfilConductorScreen(correoConductor: widget.correoConductor),
+      // ✅ Pasamos el correo al perfil para que cargue los datos
+      PerfilConductorScreen(correoConductor: correo),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Extraemos el nombre para el saludo dinámico
+    final String nombreParaMostrar = widget.userData['nombre'] ?? 'Conductor';
+
     return Scaffold(
       backgroundColor: fondoGris, 
-      appBar: AppBar(
+      appBar: AppBar( // ✅ Corregido de 'app_bar' a 'appBar' si fuera necesario
         backgroundColor: rojoPrincipal, 
         elevation: 0, 
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white), // Iconos de la AppBar en blanco
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           "TRANSTUNJA",
           style: TextStyle(
@@ -56,7 +63,7 @@ class _HomeConductorState extends State<HomeConductor> {
       ),
       body: Column(
         children: [
-          // 🏠 SECCIÓN DE SALUDO ESTÁTICO (Solo en la pestaña de Ruta)
+          // 🏠 SECCIÓN DE SALUDO (Solo en la pestaña de Ruta)
           if (currentIndex == 0)
             Container(
               width: double.infinity,
@@ -80,16 +87,16 @@ class _HomeConductorState extends State<HomeConductor> {
                   const SizedBox(width: 15),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        "Bienvenido", // ✅ Cambio: Ahora es estático
-                        style: TextStyle(
+                        "Bienvenido, $nombreParaMostrar", // ✅ Ahora es dinámico con el nombre real
+                        style: const TextStyle(
                           fontSize: 18, 
                           fontWeight: FontWeight.w900, 
                           color: Colors.black,
                         ),
                       ),
-                      Text(
+                      const Text(
                         "Selecciona tu ruta de hoy",
                         style: TextStyle(
                           fontSize: 13,
@@ -110,15 +117,15 @@ class _HomeConductorState extends State<HomeConductor> {
       // 📱 BARRA INFERIOR ROJA
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: rojoPrincipal, // ✅ Fondo rojo igual al AppBar
+          color: rojoPrincipal,
           border: const Border(top: BorderSide(color: Colors.white24, width: 0.5)),
         ),
         child: BottomNavigationBar(
           currentIndex: currentIndex,
           onTap: (index) => setState(() => currentIndex = index),
-          backgroundColor: Colors.transparent, // Transparente para usar el rojo del Container
-          selectedItemColor: Colors.white,    // ✅ Iconos seleccionados en Blanco
-          unselectedItemColor: Colors.white60, // ✅ Iconos no seleccionados en Blanco suave
+          backgroundColor: Colors.transparent,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white60,
           elevation: 0,
           type: BottomNavigationBarType.fixed, 
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),

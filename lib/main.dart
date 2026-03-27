@@ -7,7 +7,7 @@ import 'pantalla_bienvenida.dart';
 import 'package:app_transtunja/screens/login/login_screen.dart';
 import 'package:app_transtunja/screens/login/register_screen.dart';
 import 'package:app_transtunja/screens/login/role_selection_screen.dart';
-import 'package:app_transtunja/screens/login/verification_screen.dart'; // Verifica que aquí esté SmsVerificationScreen
+import 'package:app_transtunja/screens/login/verification_screen.dart'; 
 
 // --- OTROS IMPORTS ---
 import 'package:app_transtunja/screens/conductor/home_conductor.dart';
@@ -46,9 +46,7 @@ class MyApp extends StatelessWidget {
 
       home: const PantallaBienvenida(),
 
-      // Usamos onGenerateRoute para manejar los argumentos complejos (como mapas de datos)
       onGenerateRoute: (settings) {
-        // Extraemos los argumentos de forma segura
         final args = settings.arguments as Map<String, dynamic>? ?? {};
 
         switch (settings.name) {
@@ -69,7 +67,14 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const LoginScreen());
 
           case '/register':
-            return MaterialPageRoute(builder: (_) => const RegisterScreen());
+            // ✅ Corregido: Agregamos userData vacío para evitar errores de constructor
+            return MaterialPageRoute(builder: (_) => const RegisterScreen(userData: {}));
+
+          // ✅ NUEVO: Agregamos la ruta del conductor para que conecte con el login
+          case '/home_conductor':
+            return MaterialPageRoute(
+              builder: (context) => HomeConductor(userData: args),
+            );
 
           case '/home_usuario':
             return MaterialPageRoute(builder: (_) => const UserHomeScreen());

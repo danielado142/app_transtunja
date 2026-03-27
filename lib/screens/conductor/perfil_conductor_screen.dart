@@ -26,6 +26,12 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
     correoController.text = widget.correoConductor;
   }
 
+  // ✅ FUNCIÓN PARA CERRAR SESIÓN
+  void _cerrarSesion() {
+    // Esto limpia el historial de pantallas para que no pueda volver atrás
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
   Future<void> _actualizarEnFirebase() async {
     try {
       await FirebaseFirestore.instance
@@ -55,7 +61,6 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Solo actualizamos controladores si el usuario NO está escribiendo actualmente
           if (!editando && snapshot.hasData && snapshot.data!.exists) {
             var data = snapshot.data!.data() as Map<String, dynamic>;
             nombreController.text = data['nombre'] ?? "";
@@ -88,11 +93,10 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
 
                   const SizedBox(height: 45),
 
-                  // BOTÓN DE ACCIÓN
+                  // BOTÓN DE ACCIÓN (EDITAR/GUARDAR)
                   GestureDetector(
                     onTap: () async {
                       if (editando) {
-                        // SI ESTÁ EN VERDE: Guarda y luego bloquea
                         await _actualizarEnFirebase();
                         setState(() => editando = false);
                         if (mounted) {
@@ -101,7 +105,6 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
                           );
                         }
                       } else {
-                        // SI ESTÁ EN ROJO: Solo habilita para empezar a escribir
                         setState(() => editando = true);
                       }
                     },
@@ -125,6 +128,23 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
                       ),
                     ),
                   ),
+
+                  // ✅ NUEVO: BOTÓN DE CERRAR SESIÓN
+                  const SizedBox(height: 15),
+                  OutlinedButton.icon(
+                    onPressed: _cerrarSesion,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 55),
+                      side: BorderSide(color: rojoPrincipal.withOpacity(0.4)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    icon: Icon(Icons.logout, color: rojoPrincipal),
+                    label: Text(
+                      "CERRAR SESIÓN",
+                      style: TextStyle(color: rojoPrincipal, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
@@ -142,7 +162,7 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          enabled: habilitado ? editando : false, // ✅ Ahora sí se desbloquea al dar clic
+          enabled: habilitado ? editando : false,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
@@ -151,7 +171,6 @@ class _PerfilConductorScreenState extends State<PerfilConductorScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.black12),
             ),
-            // Estilo cuando está bloqueado
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

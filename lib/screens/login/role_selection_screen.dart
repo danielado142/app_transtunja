@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../administrador/admin_verification_screen.dart';
 import '../usuario/user_home_screen.dart'; 
 // ✅ Importamos tu pantalla de conductor
 import '../conductor/home_conductor.dart';
-// Asegúrate de que la ruta sea donde guardaste tu archivo del Home
 
 class RoleSelectionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -18,9 +16,9 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // 🔥 AJUSTE AQUÍ: Ahora va directo a tu HomeConductor con el correo real
+  // ✅ CORREGIDO: Ahora envía el mapa 'userData' para que coincida con el HomeConductor
   void _goToDriver(BuildContext context) {
-    // Extraemos el correo que viene del LoginScreen
+    // Extraemos los datos que vienen del LoginScreen de forma segura
     String emailConductor = userData['correo'] ?? userData['email'] ?? "conductor@mail.com";
     String nombreConductor = userData['nombre'] ?? userData['nombreUsuario'] ?? "Conductor";
 
@@ -28,8 +26,11 @@ class RoleSelectionScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => HomeConductor(
-          correoConductor: emailConductor, 
-          nombreConductor: nombreConductor,
+          // Se envía como un solo mapa llamado userData
+          userData: {
+            'nombre': nombreConductor,
+            'correo': emailConductor,
+          },
         ),
       ),
     );

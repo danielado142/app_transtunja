@@ -77,9 +77,9 @@ class _RutaActualScreenState extends State<RutaActualScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
             children: [
-              Expanded(child: _botonRuta("R18: Term - Centro", rutaSeleccionada == 18, 18)),
+              Expanded(child: _botonRuta("R5: Term - Centro", rutaSeleccionada == 18, 18)),
               const SizedBox(width: 8),
-              Expanded(child: _botonRuta("R15: Centro - Muiscas", rutaSeleccionada == 15, 15)),
+              Expanded(child: _botonRuta("R2: Centro - Muiscas", rutaSeleccionada == 15, 15)),
             ],
           ),
         ),
