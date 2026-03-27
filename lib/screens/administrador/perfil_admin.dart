@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 class PerfilAdminContenido extends StatelessWidget {
   const PerfilAdminContenido({super.key});
 
+  // ✅ Función para cerrar sesión
+  void _logout(BuildContext context) {
+    // Navigator.pushNamedAndRemoveUntil elimina todas las pantallas anteriores
+    // para que el usuario no pueda "volver" al perfil después de salir.
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> admin = {
@@ -99,12 +106,40 @@ class PerfilAdminContenido extends StatelessWidget {
             titulo: 'ARL',
             valor: admin['arl'] as String,
           ),
-          const SizedBox(height: 24),
+          
+          const SizedBox(height: 30),
+
+          // 🔥 BOTÓN DE CERRAR SESIÓN
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _logout(context),
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                'Cerrar Sesión',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC0392B), // Rojo elegante
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 }
+
+// --- Funciones y Widgets Auxiliares ---
 
 String formatearPesos(int valor) {
   final texto = valor.toString();
