@@ -25,11 +25,11 @@ class RouteDetailModel {
   }) {
     return RouteDetailModel(
       routeName: routeName,
-      origin: "Terminal", // Datos de ejemplo
-      destination: "UPTC", // Datos de ejemplo
+      origin: "Terminal", 
+      destination: "UPTC", 
       stopName: stopName,
       etaText: etaText,
-      // Generamos una lista de paradas de ejemplo para que no se vea vacío
+      
       stops: [
         RouteStopModel(
           name: "Terminal",

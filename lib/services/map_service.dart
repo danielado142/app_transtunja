@@ -26,22 +26,35 @@ class MapService {
 
     List<LatLng> basePoints = [];
 
-    if (name.contains('r2') || name.contains('centro - uptc')) {
+    // 🔥 R2 (Centro → Muiscas REAL)
+    if (name.contains('r2') || name.contains('centro - muiscas')) {
       basePoints = const [
-        LatLng(5.5354, -73.3676),
-        LatLng(5.5430, -73.3568),
+        LatLng(5.53320, -73.36150), // Plaza de Bolívar
+        LatLng(5.54500, -73.35500), // Punto intermedio (mejora precisión)
+        LatLng(5.55850, -73.34450), // Los Muiscas
       ];
-    } else if (name.contains('r5') || name.contains('terminal - centro')) {
+    }
+
+    // 🔥 R5 (Terminal → Centro REAL)
+    else if (name.contains('r5') || name.contains('terminal - centro')) {
       basePoints = const [
-        LatLng(5.5478, -73.3589),
-        LatLng(5.5358, -73.3671),
+        LatLng(5.51820, -73.36150), // Terminal
+        LatLng(5.53060, -73.36250), // Parque Santander
+        LatLng(5.53280, -73.36160), // Plaza de Bolívar
       ];
-    } else if (name.contains('r8') || name.contains('unicentro - hospital')) {
+    }
+
+    // 🔥 R8 (se mantiene pero mejorada)
+    else if (name.contains('r8') || name.contains('unicentro - hospital')) {
       basePoints = const [
         LatLng(5.5487, -73.3529),
+        LatLng(5.5457, -73.3552),
         LatLng(5.5398, -73.3621),
       ];
-    } else {
+    }
+
+    // 🔥 Default
+    else {
       basePoints = const [
         LatLng(5.5333, -73.3667),
         LatLng(5.5400, -73.3600),
@@ -49,12 +62,12 @@ class MapService {
     }
 
     try {
-      // 🔥 AQUÍ SE CONVIERTE EN RUTA REAL POR CARRETERAS
+      // 🚀 RUTA REAL POR CARRETERAS
       final routePoints = await _routingService.buildRoadPolyline(basePoints);
 
       return MapRouteModel(points: routePoints);
     } catch (e) {
-      // ⚠️ Si falla internet o API, usa línea normal
+      // ⚠️ fallback si falla OSRM
       return MapRouteModel(points: basePoints);
     }
   }
@@ -62,43 +75,37 @@ class MapService {
   Future<List<BusStopModel>> getBusStopsFor(RouteModel? route) async {
     final name = _normalizeRouteName(route);
 
-    if (name.contains('r2') || name.contains('centro - uptc')) {
+    // 🔥 R2 actualizado
+    if (name.contains('r2') || name.contains('centro - muiscas')) {
       return const [
         BusStopModel(
-          name: 'Centro',
-          position: LatLng(5.5354, -73.3676),
+          name: 'Plaza de Bolívar',
+          position: LatLng(5.53320, -73.36150),
           isMain: true,
         ),
         BusStopModel(
-          name: 'Plaza Real',
-          position: LatLng(5.5367, -73.3645),
-        ),
-        BusStopModel(
-          name: 'Parque Santander',
-          position: LatLng(5.5392, -73.3607),
-        ),
-        BusStopModel(
-          name: 'UPTC',
-          position: LatLng(5.5430, -73.3568),
+          name: 'Los Muiscas',
+          position: LatLng(5.55850, -73.34450),
           isMain: true,
         ),
       ];
     }
 
+    // 🔥 R5 actualizado
     if (name.contains('r5') || name.contains('terminal - centro')) {
       return const [
         BusStopModel(
           name: 'Terminal',
-          position: LatLng(5.5478, -73.3589),
+          position: LatLng(5.51820, -73.36150),
           isMain: true,
         ),
         BusStopModel(
           name: 'Parque Santander',
-          position: LatLng(5.5394, -73.3642),
+          position: LatLng(5.53060, -73.36250),
         ),
         BusStopModel(
-          name: 'Centro',
-          position: LatLng(5.5358, -73.3671),
+          name: 'Plaza de Bolívar',
+          position: LatLng(5.53280, -73.36160),
           isMain: true,
         ),
       ];
@@ -135,15 +142,15 @@ class MapService {
   Future<LatLng?> getBusPositionFor(RouteModel? route) async {
     final name = _normalizeRouteName(route);
 
-    if (name.contains('r2') || name.contains('centro - uptc')) {
-      return const LatLng(5.5367, -73.3645);
+    if (name.contains('r2')) {
+      return const LatLng(5.54000, -73.35500);
     }
 
-    if (name.contains('r5') || name.contains('terminal - centro')) {
-      return const LatLng(5.5420, -73.3620);
+    if (name.contains('r5')) {
+      return const LatLng(5.53060, -73.36250);
     }
 
-    if (name.contains('r8') || name.contains('unicentro - hospital')) {
+    if (name.contains('r8')) {
       return const LatLng(5.5457, -73.3552);
     }
 
