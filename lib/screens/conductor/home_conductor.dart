@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ruta_actual_screen.dart';
 import 'reportes_conductor.dart';
 import 'perfil_conductor_screen.dart';
@@ -39,101 +38,89 @@ class _HomeConductorState extends State<HomeConductor> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: fondoGris, // ⚪ Fondo Gris claro #F6F6F7
+      backgroundColor: fondoGris, 
       appBar: AppBar(
-        backgroundColor: rojoPrincipal, // 🔴 Rojo #D10000
-        elevation: 0, // 🟥 Plano para consistencia visual
+        backgroundColor: rojoPrincipal, 
+        elevation: 0, 
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white), // Iconos de la AppBar en blanco
         title: const Text(
           "TRANSTUNJA",
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
-            fontWeight: FontWeight.w800, // 🟥 Peso w800
+            fontWeight: FontWeight.w800, 
             letterSpacing: 1.2,
           ),
         ),
       ),
       body: Column(
         children: [
-          // 🏠 SECCIÓN DE SALUDO DINÁMICO (Solo en la pestaña de Ruta)
+          // 🏠 SECCIÓN DE SALUDO ESTÁTICO (Solo en la pestaña de Ruta)
           if (currentIndex == 0)
-            StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('usuarios')
-                  .doc(widget.correoConductor)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                String nombreAMostrar = widget.nombreConductor;
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  var data = snapshot.data!.data() as Map<String, dynamic>;
-                  nombreAMostrar = data['nombre'] ?? widget.nombreConductor;
-                }
-
-                return Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Colors.black.withOpacity(0.05)),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.black.withOpacity(0.05)),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: rojoPrincipal.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(Icons.directions_bus, color: rojoPrincipal, size: 28),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  child: Row(
-                    children: [
-                      // Icono con el rojo oficial
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: rojoPrincipal.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                  const SizedBox(width: 15),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        "Bienvenido", // ✅ Cambio: Ahora es estático
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.w900, 
+                          color: Colors.black,
                         ),
-                        child: Icon(Icons.directions_bus, color: rojoPrincipal, size: 28),
                       ),
-                      const SizedBox(width: 15),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Hola, $nombreAMostrar",
-                            style: const TextStyle(
-                              fontSize: 18, 
-                              fontWeight: FontWeight.w900, // 🟥 Peso w900 (Bien marcado)
-                              color: Colors.black,
-                            ),
-                          ),
-                          const Text(
-                            "Selecciona tu ruta de hoy",
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600, // 🟨 Peso w600
-                              color: Colors.black54,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        "Selecciona tu ruta de hoy",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600, 
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
 
           // Contenido principal (Pantallas)
           Expanded(child: screens[currentIndex]),
         ],
       ),
+      // 📱 BARRA INFERIOR ROJA
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.black12, width: 0.5)),
+        decoration: BoxDecoration(
+          color: rojoPrincipal, // ✅ Fondo rojo igual al AppBar
+          border: const Border(top: BorderSide(color: Colors.white24, width: 0.5)),
         ),
         child: BottomNavigationBar(
           currentIndex: currentIndex,
           onTap: (index) => setState(() => currentIndex = index),
-          backgroundColor: Colors.white,
-          selectedItemColor: rojoPrincipal,
-          unselectedItemColor: Colors.black26,
+          backgroundColor: Colors.transparent, // Transparente para usar el rojo del Container
+          selectedItemColor: Colors.white,    // ✅ Iconos seleccionados en Blanco
+          unselectedItemColor: Colors.white60, // ✅ Iconos no seleccionados en Blanco suave
           elevation: 0,
-          type: BottomNavigationBarType.fixed, // 🟦 Evita movimientos extraños
+          type: BottomNavigationBarType.fixed, 
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 12),
           items: const [

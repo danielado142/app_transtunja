@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+// ✅ Asegúrate de que esta ruta apunte correctamente a tu servicio de rutas
+import '../../services/routing_service.dart'; 
 
 class RutaActualScreen extends StatefulWidget {
   const RutaActualScreen({super.key});
@@ -10,140 +12,174 @@ class RutaActualScreen extends StatefulWidget {
 }
 
 class _RutaActualScreenState extends State<RutaActualScreen> {
-  // 🎨 PALETA DE COLORES OFICIAL
   final Color rojoPrincipal = const Color(0xFFD10000);
-  final Color fondoGris = const Color(0xFFF6F6F7);
-
+  final Color azulRuta = const Color(0xFF2196F3); 
+  final MapController _mapController = MapController();
+  final RoutingService _routingService = RoutingService();
+  
   int rutaSeleccionada = 18;
+  bool _cargandoRuta = true;
+  List<LatLng> _puntosDibujados = [];
 
-  // 🔴 R18 (Coordenadas Tunja)
-  final List<LatLng> rutaR18 = [
-    LatLng(5.5447, -73.3570),
-    LatLng(5.5480, -73.3530),
-    LatLng(5.5520, -73.3500),
-    LatLng(5.5560, -73.3460),
+  // 📍 R18: Terminal -> Parque Santander -> Plaza de Bolívar
+  final List<LatLng> puntosR18 = [
+    const LatLng(5.51820, -73.36150), // Inicio: Terminal
+    const LatLng(5.53060, -73.36250), // Paso: Parque Santander
+    const LatLng(5.53280, -73.36160), // Fin: Plaza de Bolívar
   ];
 
-  // 🔵 R15 (Coordenadas Tunja)
-  final List<LatLng> rutaR15 = [
-    LatLng(5.5447, -73.3570),
-    LatLng(5.5400, -73.3600),
-    LatLng(5.5370, -73.3650),
-    LatLng(5.5330, -73.3700),
+  // 📍 R15: Plaza de Bolívar -> Av. Norte -> Los Muiscas
+  final List<LatLng> puntosR15 = [
+    const LatLng(5.53320, -73.36150), // Inicio: Centro
+    const LatLng(5.54500, -73.35500), // Paso: Av. Norte
+    const LatLng(5.55850, -73.34450), // Fin: Los Muiscas
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _trazarRuta(18); // Carga la R18 por defecto al abrir
+  }
+
+  Future<void> _trazarRuta(int numeroRuta) async {
+    setState(() { 
+      _cargandoRuta = true; 
+      rutaSeleccionada = numeroRuta; 
+    });
+
+    List<LatLng> puntosBase = numeroRuta == 18 ? puntosR18 : puntosR15;
+    
+    try {
+      final rutaCurva = await _routingService.buildRoadPolyline(puntosBase);
+      setState(() { 
+        _puntosDibujados = rutaCurva; 
+        _cargandoRuta = false; 
+      });
+
+      if (_puntosDibujados.isNotEmpty) {
+        // Zoom 15.2 para que se vea el trayecto claro y el Parque Santander
+        _mapController.move(_puntosDibujados.first, 15.2); 
+      }
+    } catch (e) {
+      setState(() { 
+        _puntosDibujados = puntosBase; 
+        _cargandoRuta = false; 
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    List<LatLng> rutaActual = rutaSeleccionada == 18 ? rutaR18 : rutaR15;
-
-    return Container(
-      color: fondoGris, // ⚪ Fondo Gris claro #F6F6F7
-      child: Column(
-        children: [
-          const SizedBox(height: 10),
-
-          // 🚏 BOTONES DE RUTA (Diseño corregido)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => rutaSeleccionada = 18),
-                    child: _botonRuta("Ruta R18", rutaSeleccionada == 18),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => rutaSeleccionada = 15),
-                    child: _botonRuta("Ruta R15", rutaSeleccionada == 15),
-                  ),
-                ),
-              ],
-            ),
+    return Column(
+      children: [
+        // 🚏 BOTONES DE SELECCIÓN
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(child: _botonRuta("R5: Term - Centro", rutaSeleccionada == 18, 18)),
+              const SizedBox(width: 8),
+              Expanded(child: _botonRuta("R2: Centro - Muiscas", rutaSeleccionada == 15, 15)),
+            ],
           ),
+        ),
 
-          // 🗺️ MAPA (Con bordes suaves y sombra)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(15, 5, 15, 15),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
-                  ],
+        // 🗺️ MAPA PANTALLA COMPLETA
+        Expanded(
+          child: Stack(
+            children: [
+              FlutterMap(
+                mapController: _mapController,
+                options: const MapOptions(
+                  initialCenter: LatLng(5.5332, -73.3615),
+                  initialZoom: 15.2,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: FlutterMap(
-                    options: const MapOptions(
-                      initialCenter: LatLng(5.5447, -73.3570),
-                      initialZoom: 14.5,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        userAgentPackageName: 'com.transtunja.app', // ✅ Evita el bloqueo del mapa
-                      ),
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: rutaActual,
-                            color: rojoPrincipal, // 🔴 Rojo #D10000
-                            strokeWidth: 6,
-                          ),
-                        ],
-                      ),
-                      MarkerLayer(
-                        markers: rutaActual.map((punto) {
-                          return Marker(
-                            point: punto,
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.location_on,
-                              color: rojoPrincipal,
-                              size: 35,
-                            ),
-                          );
-                        }).toList(),
+                children: [
+                  TileLayer(
+                    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    userAgentPackageName: 'com.transtunja.app',
+                  ),
+                  // Línea de la ruta en Azul
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _puntosDibujados, 
+                        color: azulRuta, 
+                        strokeWidth: 6,
                       ),
                     ],
                   ),
-                ),
+                  MarkerLayer(
+                    markers: [
+                      if (_puntosDibujados.isNotEmpty) ...[
+                        // PIN DE INICIO
+                        Marker(
+                          point: _puntosDibujados.first,
+                          width: 80, height: 80,
+                          child: _etiquetaMarcador("INICIO", Colors.green, Icons.location_on),
+                        ),
+                        // PIN DE FIN
+                        Marker(
+                          point: _puntosDibujados.last,
+                          width: 80, height: 80,
+                          child: _etiquetaMarcador("FIN", rojoPrincipal, Icons.flag_circle),
+                        ),
+                      ]
+                    ],
+                  ),
+                ],
               ),
-            ),
+              // Indicador de carga
+              if (_cargandoRuta) 
+                const Center(child: CircularProgressIndicator(color: Colors.red)),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  // 🔥 BOTÓN SEGÚN TU GUÍA DE ESTILOS
-  Widget _botonRuta(String texto, bool seleccionado) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: seleccionado ? rojoPrincipal : Colors.white,
-        borderRadius: BorderRadius.circular(15), // Bordes suaves
-        border: Border.all(
-          color: seleccionado ? rojoPrincipal : Colors.black12, 
-          width: 1.5
+  // Widget para las etiquetas de Inicio/Fin
+  Widget _etiquetaMarcador(String texto, Color color, IconData icono) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Text(
+            texto,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
         ),
-        boxShadow: seleccionado 
-          ? [BoxShadow(color: rojoPrincipal.withOpacity(0.3), blurRadius: 8)]
-          : null,
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(
-          color: seleccionado ? Colors.white : Colors.black87,
-          fontWeight: FontWeight.w800, // 🟦 Peso w800 para etiquetas
-          fontSize: 14,
+        Icon(icono, color: color, size: 35),
+      ],
+    );
+  }
+
+  // Widget para los botones de arriba
+  Widget _botonRuta(String texto, bool seleccionado, int id) {
+    return GestureDetector(
+      onTap: () => _trazarRuta(id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: seleccionado ? rojoPrincipal : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: seleccionado ? rojoPrincipal : Colors.black12),
+        ),
+        child: Center(
+          child: Text(
+            texto,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: seleccionado ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
         ),
       ),
     );
